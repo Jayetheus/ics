@@ -1,8 +1,5 @@
-import React from 'react';
-import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { initializeDatabase } from './services/dataLoader';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
@@ -16,23 +13,22 @@ import Finance from './pages/Finance';
 import Documents from './pages/Documents';
 import StudentManagement from './pages/StudentManagement';
 import PaymentManagement from './pages/PaymentManagement';
+import Applications from './pages/Applications';
+import Courses from './pages/Courses';
+import Schedule from './pages/Schedule';
+import ResultsEntry from './pages/ResultsEntry';
+import CourseManagement from './pages/CourseManagement';
+import TimetableManagement from './pages/TimetableManagement';
+import AssetManagement from './pages/AssetManagement';
+import Reports from './pages/Reports';
+import HelpdeskManagement from './pages/HelpdeskManagement';
+import Settings from './pages/Settings';
+import StudentFinance from './pages/StudentFinance';
+import FinancialReports from './pages/FinancialReports';
+import PaymentProofs from './pages/PaymentProofs';
 
 function App() {
-  useEffect(() => {
-    // Initialize database with mock data in development
-    if (import.meta.env.DEV) {
-      const shouldInitialize = localStorage.getItem('ics-db-initialized');
-      if (!shouldInitialize) {
-        initializeDatabase().then(() => {
-          localStorage.setItem('ics-db-initialized', 'true');
-          console.log('Database initialized with mock data');
-        }).catch(error => {
-          console.error('Failed to initialize database:', error);
-        });
-      }
-    }
-  }, []);
-
+  
   return (
     <AuthProvider>
       <Router>
@@ -55,6 +51,11 @@ function App() {
             <Route path="profile" element={
               <ProtectedRoute allowedRoles={['student']}>
                 <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="applications" element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <Applications />
               </ProtectedRoute>
             } />
             <Route path="results" element={
@@ -84,9 +85,54 @@ function App() {
                 <StudentManagement />
               </ProtectedRoute>
             } />
+            <Route path="courses" element={
+              <ProtectedRoute allowedRoles={['lecturer']}>
+                <Courses />
+              </ProtectedRoute>
+            } />
+            <Route path="schedule" element={
+              <ProtectedRoute allowedRoles={['lecturer']}>
+                <Schedule />
+              </ProtectedRoute>
+            } />
+            <Route path="results-entry" element={
+              <ProtectedRoute allowedRoles={['lecturer']}>
+                <ResultsEntry />
+              </ProtectedRoute>
+            } />
             <Route path="student-management" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <StudentManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="course-management" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <CourseManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="timetable-management" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <TimetableManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="asset-management" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AssetManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="reports" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Reports />
+              </ProtectedRoute>
+            } />
+            <Route path="helpdesk-management" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <HelpdeskManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="settings" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Settings />
               </ProtectedRoute>
             } />
             
@@ -94,6 +140,21 @@ function App() {
             <Route path="payment-management" element={
               <ProtectedRoute allowedRoles={['finance']}>
                 <PaymentManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="student-finance" element={
+              <ProtectedRoute allowedRoles={['finance']}>
+                <StudentFinance />
+              </ProtectedRoute>
+            } />
+            <Route path="financial-reports" element={
+              <ProtectedRoute allowedRoles={['finance']}>
+                <FinancialReports />
+              </ProtectedRoute>
+            } />
+            <Route path="payment-proofs" element={
+              <ProtectedRoute allowedRoles={['finance']}>
+                <PaymentProofs />
               </ProtectedRoute>
             } />
           </Route>

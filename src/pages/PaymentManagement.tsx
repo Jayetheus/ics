@@ -215,7 +215,7 @@ const PaymentManagement: React.FC = () => {
               {filteredPayments.map((payment) => (
                 <tr key={payment.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {payment.date}
+                    {payment.date.toDate().toDateString()}
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{payment.description}</div>

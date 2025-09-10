@@ -20,7 +20,9 @@ const Login: React.FC = () => {
       setError('');
       setLoading(true);
       await login(email, password);
-      navigate('/dashboard');
+
+      navigate('/dashboard', { replace: true });
+      console.log("Logged In")
     } catch (error: any) {
       setError('Failed to log in. Please check your credentials.');
     } finally {

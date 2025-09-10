@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase/firestore";
+
 export interface User {
   uid: string;
   email: string;
@@ -76,9 +78,28 @@ export interface Payment {
   amount: number;
   type: 'registration' | 'tuition' | 'accommodation' | 'other';
   status: 'pending' | 'approved' | 'rejected';
-  date: string;
+  date: Timestamp;
   proofOfPaymentUrl?: string;
   description: string;
+}
+
+export interface Application {
+  id: string;
+  studentId: string;
+  courseCode: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  notes?: string;
+}
+
+export interface Subject {
+  id: string;
+  courseCode: string;
+  code: string;
+  name: string;
+  credits: number;
+  semester: string;
 }
 
 export interface Ticket {

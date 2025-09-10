@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Upload, Download, AlertTriangle, CheckCircle, Clock, Plus } from 'lucide-react';
+import { CreditCard, Download, AlertTriangle, CheckCircle, Clock, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getPaymentsByStudent, createPayment } from '../services/database';
 import { PAYMENT_TYPES } from '../data/constants';
 import { Payment } from '../types';
 import FileUpload from '../components/common/FileUpload';
+import { serverTimestamp, Timestamp } from 'firebase/firestore';
 
 const Finance: React.FC = () => {
   const { currentUser } = useAuth();
@@ -49,14 +50,18 @@ const Finance: React.FC = () => {
       type: newPayment.type,
       description: newPayment.description,
       proofOfPaymentUrl: newPayment.proofOfPaymentUrl,
+      status: 'pending' as Payment['status'],
+      date: serverTimestamp() as Timestamp,
     };
 
     try {
       await createPayment(paymentData);
       
       // Refresh payments list
-      const updatedPayments = await getPaymentsByStudent(currentUser.uid);
-      setPayments(updatedPayments);
+      if (currentUser?.uid) {
+        const updatedPayments = await getPaymentsByStudent(currentUser.uid);
+        setPayments(updatedPayments);
+      }
       
       setNewPayment({
         amount: '',
@@ -339,7 +344,9 @@ const Finance: React.FC = () => {
               {payments.map((payment) => (
                 <tr key={payment.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {payment.date}
+                    {typeof (payment.date as any)?.toDate === 'function' 
+                      ? (payment.date as any).toDate().toDateString() 
+                      : new Date(payment.date as unknown as string).toDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{payment.description}</div>

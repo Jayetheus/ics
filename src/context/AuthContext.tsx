@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  User as FirebaseUser, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged 
+import {
+  User as FirebaseUser,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
@@ -32,27 +32,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const login = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
-  };
-
-  const register = async (email: string, password: string, role: UserRole, additionalData: any) => {
-    const { user } = await createUserWithEmailAndPassword(auth, email, password);
-    
-    const userData = {
-      email,
-      role,
-      profile: additionalData,
-      createdAt: new Date().toISOString(),
-    };
-
-    await setDoc(doc(db, 'users', user.uid), userData);
-  };
-
-  const logout = async () => {
-    await signOut(auth);
-  };
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
@@ -75,6 +54,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return unsubscribe;
   }, []);
+
+
+  const login = async (email: string, password: string) => {
+    await signInWithEmailAndPassword(auth, email, password);
+  };
+
+  const register = async (email: string, password: string, role: UserRole, additionalData: any) => {
+    const { user } = await createUserWithEmailAndPassword(auth, email, password);
+
+    const userData = {
+      email,
+      role,
+      profile: additionalData,
+      createdAt: new Date().toISOString(),
+    };
+
+    await setDoc(doc(db, 'users', user.uid), userData);
+  };
+
+  const logout = async () => {
+    await signOut(auth);
+  };
+
+
 
   const value = {
     currentUser,

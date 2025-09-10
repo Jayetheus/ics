@@ -12,7 +12,8 @@ import {
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from './firebase';
 import { COLLEGES, COURSES, DEPARTMENTS, PAYMENT_TYPES, TICKET_CATEGORIES, CLASS_TYPES, SEMESTERS } from '../data/constants';
-import { User, Student, Course, Result, Timetable, Payment, Ticket, Asset, UserRole } from '../types';
+import { User, Student, Course, Result, Timetable, Payment, Ticket, Asset, UserRole, Subject } from '../types';
+import { addDoc, collection } from 'firebase/firestore';
 
 // Generate student number in format: YYYY + sequential number (e.g., 2024001234)
 export const generateStudentNumber = async (): Promise<string> => {
@@ -262,6 +263,30 @@ export const loadMockCourses = async () => {
   for (const course of mockCourses) {
     await addDoc(collection(db, 'courses'), course);
     console.log(`Created course: ${course.code} - ${course.name}`);
+  }
+};
+
+// Load mock subjects per course
+export const loadMockSubjects = async () => {
+  const subjectsByCourse: Record<string, Omit<Subject, 'id'>[]> = {
+    'CS101': [
+      { courseCode: 'CS101', code: 'CS101-1', name: 'Programming Basics', credits: 8, semester: 'Semester 1' },
+      { courseCode: 'CS101', code: 'CS101-2', name: 'Computer Systems', credits: 8, semester: 'Semester 1' },
+    ],
+    'IT201': [
+      { courseCode: 'IT201', code: 'IT201-1', name: 'SQL and Modeling', credits: 8, semester: 'Semester 1' },
+      { courseCode: 'IT201', code: 'IT201-2', name: 'NoSQL and Scaling', credits: 8, semester: 'Semester 2' },
+    ],
+    'BUS301': [
+      { courseCode: 'BUS301', code: 'BUS301-1', name: 'Corporate Strategy', credits: 8, semester: 'Semester 1' },
+      { courseCode: 'BUS301', code: 'BUS301-2', name: 'Operations Strategy', credits: 8, semester: 'Semester 2' },
+    ],
+  };
+
+  for (const list of Object.values(subjectsByCourse)) {
+    for (const subject of list) {
+      await addDoc(collection(db, 'subjects'), subject);
+    }
   }
 };
 
@@ -547,6 +572,7 @@ export const loadAllMockData = async () => {
     await loadMockPayments();
     await loadMockTickets();
     await loadMockAssets();
+    await loadMockSubjects();
     
     console.log('All mock data loaded successfully!');
   } catch (error) {

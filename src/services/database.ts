@@ -14,7 +14,7 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Student, Course, Result, Timetable, Payment, Ticket, Asset } from '../types';
+import { Student, Course, Result, Timetable, Payment, Ticket, Asset, Application, Subject } from '../types';
 
 // Students
 export const createStudent = async (studentData: Omit<Student, 'id'>) => {
@@ -152,4 +152,38 @@ export const getAssets = async () => {
 export const deleteAsset = async (id: string) => {
   const docRef = doc(db, 'assets', id);
   await deleteDoc(docRef);
+};
+
+// Applications
+export const createApplication = async (applicationData: Omit<Application, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const docRef = await addDoc(collection(db, 'applications'), {
+    ...applicationData,
+    status: 'pending',
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+  });
+  return docRef.id;
+};
+
+export const getApplicationsByStudent = async (studentId: string) => {
+  const q = query(collection(db, 'applications'), where('studentId', '==', studentId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
+};
+
+export const updateApplicationStatus = async (applicationId: string, status: Application['status']) => {
+  const ref = doc(db, 'applications', applicationId);
+  await updateDoc(ref, { status, updatedAt: Timestamp.now() });
+};
+
+// Subjects
+export const createSubject = async (subjectData: Omit<Subject, 'id'>) => {
+  const docRef = await addDoc(collection(db, 'subjects'), subjectData);
+  return docRef.id;
+};
+
+export const getSubjectsByCourse = async (courseCode: string) => {
+  const q = query(collection(db, 'subjects'), where('courseCode', '==', courseCode));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
 };

@@ -34,6 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
         return [
           ...baseItems,
           { icon: User, label: 'Profile', path: '/profile' },
+          { icon: FileText, label: 'Applications', path: '/applications' },
           { icon: FileText, label: 'Results', path: '/results' },
           { icon: Calendar, label: 'Timetable', path: '/timetable' },
           { icon: CreditCard, label: 'Finance', path: '/finance' },

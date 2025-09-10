@@ -36,7 +36,7 @@ const Helpdesk: React.FC = () => {
     priority: 'medium' as 'low' | 'medium' | 'high',
   });
 
-  const handleCreateTicket = (e: React.FormEvent) => {
+  const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const ticketData = {
@@ -45,14 +45,17 @@ const Helpdesk: React.FC = () => {
       description: newTicket.description,
       category: newTicket.category,
       priority: newTicket.priority,
+      status: 'open' as 'open' | 'in-progress' | 'resolved' | 'closed',
     };
 
     try {
       createTicket(ticketData);
       
       // Refresh tickets list
-      const updatedTickets = await getTicketsByStudent(currentUser.uid);
-      setTickets(updatedTickets);
+      if (currentUser) {
+        const updatedTickets = await getTicketsByStudent(currentUser.uid);
+        setTickets(updatedTickets);
+      }
       
       setShowNewTicketForm(false);
       setNewTicket({

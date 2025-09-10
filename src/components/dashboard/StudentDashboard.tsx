@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { 
   BookOpen, 
@@ -17,10 +18,12 @@ import { Result, Timetable, Payment } from '../../types';
 
 const StudentDashboard: React.FC = () => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [results, setResults] = useState<Result[]>([]);
   const [timetable, setTimetable] = useState<Timetable[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasRegistrationOrApplication, setHasRegistrationOrApplication] = useState(true);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -36,6 +39,16 @@ const StudentDashboard: React.FC = () => {
         setResults(resultsData);
         setTimetable(timetableData);
         setPayments(paymentsData);
+
+        // Simple gate: if user profile lacks course/year and no payments exist, send to applications
+        const noCourse = !(currentUser as any)?.profile?.course;
+        const noYear = !(currentUser as any)?.profile?.year;
+        const noPayments = paymentsData.length === 0;
+        const needsApplication = noCourse || noYear;
+        setHasRegistrationOrApplication(!needsApplication || !noPayments);
+        if (needsApplication && noPayments) {
+          navigate('/applications', { replace: true });
+        }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
