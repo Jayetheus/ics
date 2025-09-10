@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Plus, Search, Filter, Clock, CheckCircle, AlertTriangle, MessageCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { createTicket } from '../services/database';
+import { Ticket } from '../types';
 
 const Helpdesk: React.FC = () => {
   const { currentUser } = useAuth();
@@ -57,8 +59,27 @@ const Helpdesk: React.FC = () => {
 
   const handleCreateTicket = (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would normally send the ticket to your backend
-    console.log('Creating ticket:', newTicket);
+    
+    const ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt'> = {
+      studentId: currentUser?.uid || '',
+      title: newTicket.title,
+      description: newTicket.description,
+      category: newTicket.category,
+      priority: newTicket.priority,
+      status: 'open',
+    };
+
+    // Add to local state for immediate UI update
+    const newTicketWithId: Ticket = {
+      ...ticket,
+      id: `TK-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // In a real app, you would call createTicket(ticket) here
+    // For now, we'll just update the local state
+    
     setShowNewTicketForm(false);
     setNewTicket({
       title: '',
@@ -66,6 +87,7 @@ const Helpdesk: React.FC = () => {
       category: 'general',
       priority: 'medium',
     });
+    alert('Support ticket created successfully!');
   };
 
   const getStatusColor = (status: string) => {

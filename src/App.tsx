@@ -7,6 +7,13 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Helpdesk from './pages/Helpdesk';
+import Profile from './pages/Profile';
+import Results from './pages/Results';
+import Timetable from './pages/Timetable';
+import Finance from './pages/Finance';
+import Documents from './pages/Documents';
+import StudentManagement from './pages/StudentManagement';
+import PaymentManagement from './pages/PaymentManagement';
 
 function App() {
   return (
@@ -30,70 +37,46 @@ function App() {
             {/* Student routes */}
             <Route path="profile" element={
               <ProtectedRoute allowedRoles={['student']}>
-                <div className="p-6 bg-white rounded-lg shadow-sm border">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Student Profile</h1>
-                  <p className="text-gray-600">Student profile management coming soon...</p>
-                </div>
+                <Profile />
               </ProtectedRoute>
             } />
             <Route path="results" element={
               <ProtectedRoute allowedRoles={['student']}>
-                <div className="p-6 bg-white rounded-lg shadow-sm border">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Academic Results</h1>
-                  <p className="text-gray-600">Student results view coming soon...</p>
-                </div>
+                <Results />
               </ProtectedRoute>
             } />
             <Route path="timetable" element={
               <ProtectedRoute allowedRoles={['student']}>
-                <div className="p-6 bg-white rounded-lg shadow-sm border">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Class Timetable</h1>
-                  <p className="text-gray-600">Student timetable view coming soon...</p>
-                </div>
+                <Timetable />
               </ProtectedRoute>
             } />
             <Route path="finance" element={
               <ProtectedRoute allowedRoles={['student', 'finance']}>
-                <div className="p-6 bg-white rounded-lg shadow-sm border">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Finance & Payments</h1>
-                  <p className="text-gray-600">Student finance view coming soon...</p>
-                </div>
+                <Finance />
               </ProtectedRoute>
             } />
             <Route path="documents" element={
               <ProtectedRoute allowedRoles={['student']}>
-                <div className="p-6 bg-white rounded-lg shadow-sm border">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Document Management</h1>
-                  <p className="text-gray-600">Document upload and management coming soon...</p>
-                </div>
+                <Documents />
               </ProtectedRoute>
             } />
             
             {/* Staff/Admin routes */}
             <Route path="students" element={
               <ProtectedRoute allowedRoles={['lecturer']}>
-                <div className="p-6 bg-white rounded-lg shadow-sm border">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">My Students</h1>
-                  <p className="text-gray-600">Student management for lecturers coming soon...</p>
-                </div>
+                <StudentManagement />
               </ProtectedRoute>
             } />
             <Route path="student-management" element={
               <ProtectedRoute allowedRoles={['admin']}>
-                <div className="p-6 bg-white rounded-lg shadow-sm border">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Student Management</h1>
-                  <p className="text-gray-600">Admin student management coming soon...</p>
-                </div>
+                <StudentManagement />
               </ProtectedRoute>
             } />
             
             {/* Finance routes */}
             <Route path="payment-management" element={
               <ProtectedRoute allowedRoles={['finance']}>
-                <div className="p-6 bg-white rounded-lg shadow-sm border">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Payment Management</h1>
-                  <p className="text-gray-600">Payment management system coming soon...</p>
-                </div>
+                <PaymentManagement />
               </ProtectedRoute>
             } />
           </Route>
