@@ -1,0 +1,256 @@
+import React from 'react';
+import { 
+  BookOpen, 
+  Calendar, 
+  CreditCard, 
+  FileText, 
+  Upload,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  TrendingUp
+} from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+
+const StudentDashboard: React.FC = () => {
+  const { currentUser } = useAuth();
+  
+  // Sample data
+  const upcomingClasses = [
+    { time: '09:00', course: 'Computer Science 101', room: 'Lab A', type: 'Practical' },
+    { time: '11:00', course: 'Mathematics', room: 'Room 203', type: 'Lecture' },
+    { time: '14:00', course: 'Physics', room: 'Lab B', type: 'Tutorial' },
+  ];
+
+  const recentResults = [
+    { course: 'Computer Science 101', mark: 85, grade: 'A' },
+    { course: 'Mathematics', mark: 78, grade: 'B+' },
+    { course: 'Physics', mark: 92, grade: 'A+' },
+  ];
+
+  const financeStatus = {
+    totalFees: 45000,
+    paidAmount: 35000,
+    outstandingAmount: 10000,
+    status: 'partial'
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Welcome Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white">
+        <h1 className="text-2xl font-bold">
+          Welcome back, {currentUser?.profile?.firstName || 'Student'}!
+        </h1>
+        <p className="mt-2 opacity-90">
+          {currentUser?.profile?.course} - Year {currentUser?.profile?.year}
+        </p>
+        <p className="text-sm opacity-75">
+          Student Number: {currentUser?.profile?.studentNumber}
+        </p>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <BookOpen className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm text-gray-600">Current Courses</p>
+              <p className="text-2xl font-semibold text-gray-900">6</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <TrendingUp className="h-6 w-6 text-green-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm text-gray-600">Average Grade</p>
+              <p className="text-2xl font-semibold text-gray-900">85%</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <Clock className="h-6 w-6 text-orange-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm text-gray-600">Next Class</p>
+              <p className="text-2xl font-semibold text-gray-900">09:00</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center">
+            <div className={`p-2 rounded-lg ${
+              financeStatus.status === 'paid' ? 'bg-green-100' : 
+              financeStatus.status === 'partial' ? 'bg-yellow-100' : 'bg-red-100'
+            }`}>
+              <CreditCard className={`h-6 w-6 ${
+                financeStatus.status === 'paid' ? 'text-green-600' : 
+                financeStatus.status === 'partial' ? 'text-yellow-600' : 'text-red-600'
+              }`} />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm text-gray-600">Finance Status</p>
+              <p className="text-sm font-semibold capitalize text-gray-900">
+                R{financeStatus.outstandingAmount.toLocaleString()} Outstanding
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Today's Schedule */}
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+              <Calendar className="h-5 w-5 mr-2 text-blue-600" />
+              Today's Schedule
+            </h2>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              {upcomingClasses.map((class_, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="bg-blue-600 text-white text-sm font-medium px-3 py-1 rounded-full">
+                      {class_.time}
+                    </div>
+                    <div className="ml-4">
+                      <p className="font-medium text-gray-900">{class_.course}</p>
+                      <p className="text-sm text-gray-600">{class_.room} • {class_.type}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Results */}
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+              <FileText className="h-5 w-5 mr-2 text-green-600" />
+              Recent Results
+            </h2>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              {recentResults.map((result, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className={`p-2 rounded-full ${
+                      result.mark >= 90 ? 'bg-green-100' :
+                      result.mark >= 80 ? 'bg-blue-100' :
+                      result.mark >= 70 ? 'bg-yellow-100' : 'bg-red-100'
+                    }`}>
+                      <CheckCircle className={`h-4 w-4 ${
+                        result.mark >= 90 ? 'text-green-600' :
+                        result.mark >= 80 ? 'text-blue-600' :
+                        result.mark >= 70 ? 'text-yellow-600' : 'text-red-600'
+                      }`} />
+                    </div>
+                    <div className="ml-3">
+                      <p className="font-medium text-gray-900">{result.course}</p>
+                      <p className="text-sm text-gray-600">Grade: {result.grade}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-gray-900">{result.mark}%</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Finance Summary */}
+      <div className="bg-white rounded-lg shadow-sm border">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+            <CreditCard className="h-5 w-5 mr-2 text-blue-600" />
+            Finance Summary
+          </h2>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Total Fees</p>
+              <p className="text-2xl font-bold text-gray-900">
+                R{financeStatus.totalFees.toLocaleString()}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Paid Amount</p>
+              <p className="text-2xl font-bold text-green-600">
+                R{financeStatus.paidAmount.toLocaleString()}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Outstanding</p>
+              <p className="text-2xl font-bold text-red-600">
+                R{financeStatus.outstandingAmount.toLocaleString()}
+              </p>
+            </div>
+          </div>
+          
+          <div className="mt-6">
+            <div className="bg-gray-200 rounded-full h-3">
+              <div 
+                className="bg-green-600 h-3 rounded-full"
+                style={{ width: `${(financeStatus.paidAmount / financeStatus.totalFees) * 100}%` }}
+              ></div>
+            </div>
+            <p className="text-sm text-gray-600 mt-2 text-center">
+              {Math.round((financeStatus.paidAmount / financeStatus.totalFees) * 100)}% paid
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-white rounded-lg shadow-sm border">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <button className="flex flex-col items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+              <Upload className="h-8 w-8 text-blue-600 mb-2" />
+              <span className="text-sm font-medium text-blue-900">Upload Document</span>
+            </button>
+            
+            <button className="flex flex-col items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+              <CreditCard className="h-8 w-8 text-green-600 mb-2" />
+              <span className="text-sm font-medium text-green-900">Make Payment</span>
+            </button>
+            
+            <button className="flex flex-col items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+              <FileText className="h-8 w-8 text-purple-600 mb-2" />
+              <span className="text-sm font-medium text-purple-900">View Results</span>
+            </button>
+            
+            <button className="flex flex-col items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors">
+              <AlertTriangle className="h-8 w-8 text-orange-600 mb-2" />
+              <span className="text-sm font-medium text-orange-900">Get Help</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default StudentDashboard;
