@@ -1,4 +1,5 @@
 import React from 'react';
+import { useState, useEffect } from 'react';
 import { 
   BookOpen, 
   Calendar, 
@@ -11,29 +12,65 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { getResultsByStudent, getTimetable, getPaymentsByStudent } from '../../services/database';
+import { Result, Timetable, Payment } from '../../types';
 
 const StudentDashboard: React.FC = () => {
   const { currentUser } = useAuth();
+  const [results, setResults] = useState<Result[]>([]);
+  const [timetable, setTimetable] = useState<Timetable[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  // Sample data
-  const upcomingClasses = [
-    { time: '09:00', course: 'Computer Science 101', room: 'Lab A', type: 'Practical' },
-    { time: '11:00', course: 'Mathematics', room: 'Room 203', type: 'Lecture' },
-    { time: '14:00', course: 'Physics', room: 'Lab B', type: 'Tutorial' },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!currentUser) return;
+      
+      try {
+        const [resultsData, timetableData, paymentsData] = await Promise.all([
+          getResultsByStudent(currentUser.uid),
+          getTimetable(),
+          getPaymentsByStudent(currentUser.uid)
+        ]);
+        
+        setResults(resultsData);
+        setTimetable(timetableData);
+        setPayments(paymentsData);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const recentResults = [
-    { course: 'Computer Science 101', mark: 85, grade: 'A' },
-    { course: 'Mathematics', mark: 78, grade: 'B+' },
-    { course: 'Physics', mark: 92, grade: 'A+' },
-  ];
+    fetchData();
+  }, [currentUser]);
 
+  // Get today's classes
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  const todaysClasses = timetable.filter(item => item.day === today).slice(0, 3);
+
+  // Get recent results (last 3)
+  const recentResults = results.slice(0, 3);
+
+  // Calculate finance status
+  const totalPaid = payments.filter(p => p.status === 'approved').reduce((sum, p) => sum + p.amount, 0);
+  const totalFees = 45000; // This could be fetched from a fees structure
+  const outstandingAmount = totalFees - totalPaid;
   const financeStatus = {
-    totalFees: 45000,
-    paidAmount: 35000,
-    outstandingAmount: 10000,
-    status: 'partial'
+    totalFees,
+    paidAmount: totalPaid,
+    outstandingAmount,
+    status: outstandingAmount > 0 ? 'partial' : 'paid'
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -59,7 +96,7 @@ const StudentDashboard: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Current Courses</p>
-              <p className="text-2xl font-semibold text-gray-900">6</p>
+              <p className="text-2xl font-semibold text-gray-900">{results.length}</p>
             </div>
           </div>
         </div>
@@ -71,7 +108,9 @@ const StudentDashboard: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Average Grade</p>
-              <p className="text-2xl font-semibold text-gray-900">85%</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {results.length > 0 ? Math.round(results.reduce((sum, r) => sum + r.mark, 0) / results.length) : 0}%
+              </p>
             </div>
           </div>
         </div>
@@ -83,7 +122,9 @@ const StudentDashboard: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Next Class</p>
-              <p className="text-2xl font-semibold text-gray-900">09:00</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {todaysClasses.length > 0 ? todaysClasses[0].startTime : 'None'}
+              </p>
             </div>
           </div>
         </div>
@@ -120,19 +161,25 @@ const StudentDashboard: React.FC = () => {
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {upcomingClasses.map((class_, index) => (
+              {todaysClasses.map((class_, index) => (
                 <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
                     <div className="bg-blue-600 text-white text-sm font-medium px-3 py-1 rounded-full">
-                      {class_.time}
+                      {class_.startTime}
                     </div>
                     <div className="ml-4">
-                      <p className="font-medium text-gray-900">{class_.course}</p>
-                      <p className="text-sm text-gray-600">{class_.room} • {class_.type}</p>
+                      <p className="font-medium text-gray-900">{class_.courseName}</p>
+                      <p className="text-sm text-gray-600">{class_.venue} • {class_.type}</p>
                     </div>
                   </div>
                 </div>
               ))}
+              {todaysClasses.length === 0 && (
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No classes scheduled for today</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -162,7 +209,7 @@ const StudentDashboard: React.FC = () => {
                       }`} />
                     </div>
                     <div className="ml-3">
-                      <p className="font-medium text-gray-900">{result.course}</p>
+                      <p className="font-medium text-gray-900">{result.courseName}</p>
                       <p className="text-sm text-gray-600">Grade: {result.grade}</p>
                     </div>
                   </div>
@@ -171,6 +218,12 @@ const StudentDashboard: React.FC = () => {
                   </div>
                 </div>
               ))}
+              {recentResults.length === 0 && (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No results available yet</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

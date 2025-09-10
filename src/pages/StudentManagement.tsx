@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Search, Filter, Plus, Edit, Eye, Trash2, Download } from 'lucide-react';
+import { getStudents, updateStudent } from '../services/database';
 import { Student } from '../types';
 
 const StudentManagement: React.FC = () => {
@@ -12,77 +13,8 @@ const StudentManagement: React.FC = () => {
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        // Sample student data
-        const sampleStudents: Student[] = [
-          {
-            id: '1',
-            studentNumber: '2024001234',
-            firstName: 'John',
-            lastName: 'Doe',
-            email: 'john.doe@student.ics.ac.za',
-            course: 'Computer Science',
-            year: 2,
-            status: 'active',
-            registrationDate: '2024-01-15',
-            profile: {
-              firstName: 'John',
-              lastName: 'Doe',
-              phone: '083 123 4567',
-              address: '123 Main St, Cape Town',
-              idNumber: '9901015800123',
-              dateOfBirth: '1999-01-01',
-              studentNumber: '2024001234',
-              course: 'Computer Science',
-              year: 2
-            }
-          },
-          {
-            id: '2',
-            studentNumber: '2024001235',
-            firstName: 'Sarah',
-            lastName: 'Wilson',
-            email: 'sarah.wilson@student.ics.ac.za',
-            course: 'Engineering',
-            year: 1,
-            status: 'active',
-            registrationDate: '2024-01-16',
-            profile: {
-              firstName: 'Sarah',
-              lastName: 'Wilson',
-              phone: '084 567 8901',
-              address: '456 Oak Ave, Johannesburg',
-              idNumber: '0002285800456',
-              dateOfBirth: '2000-02-28',
-              studentNumber: '2024001235',
-              course: 'Engineering',
-              year: 1
-            }
-          },
-          {
-            id: '3',
-            studentNumber: '2024001236',
-            firstName: 'Mike',
-            lastName: 'Johnson',
-            email: 'mike.johnson@student.ics.ac.za',
-            course: 'Business Studies',
-            year: 3,
-            status: 'suspended',
-            registrationDate: '2024-01-10',
-            profile: {
-              firstName: 'Mike',
-              lastName: 'Johnson',
-              phone: '082 345 6789',
-              address: '789 Pine St, Durban',
-              idNumber: '9803125800789',
-              dateOfBirth: '1998-03-12',
-              studentNumber: '2024001236',
-              course: 'Business Studies',
-              year: 3
-            }
-          }
-        ];
-        
-        setStudents(sampleStudents);
+        const studentsData = await getStudents();
+        setStudents(studentsData);
       } catch (error) {
         console.error('Error fetching students:', error);
       } finally {
@@ -119,10 +51,16 @@ const StudentManagement: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const handleStatusChange = (studentId: string, newStatus: Student['status']) => {
-    setStudents(students.map(student => 
-      student.id === studentId ? { ...student, status: newStatus } : student
-    ));
+  const handleStatusChange = async (studentId: string, newStatus: Student['status']) => {
+    try {
+      await updateStudent(studentId, { status: newStatus });
+      setStudents(students.map(student => 
+        student.id === studentId ? { ...student, status: newStatus } : student
+      ));
+    } catch (error) {
+      console.error('Error updating student status:', error);
+      alert('Failed to update student status');
+    }
   };
 
   if (loading) {

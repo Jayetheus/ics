@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Upload, Download, AlertTriangle, CheckCircle, Clock, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getPaymentsByStudent, createPayment } from '../services/database';
+import { PAYMENT_TYPES } from '../data/constants';
 import { Payment } from '../types';
 import FileUpload from '../components/common/FileUpload';
 
@@ -18,41 +20,11 @@ const Finance: React.FC = () => {
 
   useEffect(() => {
     const fetchPayments = async () => {
+      if (!currentUser) return;
+      
       try {
-        // Sample payment data
-        const samplePayments: Payment[] = [
-          {
-            id: '1',
-            studentId: currentUser?.uid || '',
-            amount: 15000,
-            type: 'tuition',
-            status: 'approved',
-            date: '2025-01-15',
-            description: 'Semester 1 Tuition Fee',
-            proofOfPaymentUrl: 'https://example.com/proof1.pdf'
-          },
-          {
-            id: '2',
-            studentId: currentUser?.uid || '',
-            amount: 5000,
-            type: 'registration',
-            status: 'pending',
-            date: '2025-01-10',
-            description: 'Registration Fee 2025',
-            proofOfPaymentUrl: 'https://example.com/proof2.pdf'
-          },
-          {
-            id: '3',
-            studentId: currentUser?.uid || '',
-            amount: 8000,
-            type: 'accommodation',
-            status: 'approved',
-            date: '2025-01-05',
-            description: 'Residence Fee - January',
-          }
-        ];
-        
-        setPayments(samplePayments);
+        const paymentsData = await getPaymentsByStudent(currentUser.uid);
+        setPayments(paymentsData);
       } catch (error) {
         console.error('Error fetching payments:', error);
       } finally {
@@ -71,26 +43,33 @@ const Finance: React.FC = () => {
       return;
     }
 
-    const payment: Payment = {
-      id: Date.now().toString(),
+    const paymentData = {
       studentId: currentUser?.uid || '',
       amount: parseFloat(newPayment.amount),
       type: newPayment.type,
-      status: 'pending',
-      date: new Date().toISOString().split('T')[0],
       description: newPayment.description,
       proofOfPaymentUrl: newPayment.proofOfPaymentUrl,
     };
 
-    setPayments([payment, ...payments]);
-    setNewPayment({
-      amount: '',
-      type: 'tuition',
-      description: '',
-      proofOfPaymentUrl: '',
-    });
-    setShowPaymentForm(false);
-    alert('Payment submitted successfully! It will be reviewed by the finance team.');
+    try {
+      await createPayment(paymentData);
+      
+      // Refresh payments list
+      const updatedPayments = await getPaymentsByStudent(currentUser.uid);
+      setPayments(updatedPayments);
+      
+      setNewPayment({
+        amount: '',
+        type: 'tuition',
+        description: '',
+        proofOfPaymentUrl: '',
+      });
+      setShowPaymentForm(false);
+      alert('Payment submitted successfully! It will be reviewed by the finance team.');
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      alert('Failed to submit payment. Please try again.');
+    }
   };
 
   const handleProofUpload = (fileData: any) => {
@@ -249,10 +228,11 @@ const Finance: React.FC = () => {
                   onChange={(e) => setNewPayment({ ...newPayment, type: e.target.value as Payment['type'] })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="tuition">Tuition Fee</option>
-                  <option value="registration">Registration Fee</option>
-                  <option value="accommodation">Accommodation Fee</option>
-                  <option value="other">Other</option>
+                  {PAYMENT_TYPES.map(type => (
+                    <option key={type} value={type}>
+                      {type.charAt(0).toUpperCase() + type.slice(1).replace('-', ' ')} Fee
+                    </option>
+                  ))}
                 </select>
               </div>
               

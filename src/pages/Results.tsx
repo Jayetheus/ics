@@ -16,66 +16,8 @@ const Results: React.FC = () => {
       if (!currentUser) return;
       
       try {
-        // For demo purposes, using sample data
-        const sampleResults: Result[] = [
-          {
-            id: '1',
-            studentId: currentUser.uid,
-            courseId: 'cs101',
-            courseName: 'Computer Science 101',
-            courseCode: 'CS101',
-            mark: 85,
-            grade: 'A',
-            semester: 'Semester 1',
-            year: 2024
-          },
-          {
-            id: '2',
-            studentId: currentUser.uid,
-            courseId: 'math101',
-            courseName: 'Mathematics 101',
-            courseCode: 'MATH101',
-            mark: 78,
-            grade: 'B+',
-            semester: 'Semester 1',
-            year: 2024
-          },
-          {
-            id: '3',
-            studentId: currentUser.uid,
-            courseId: 'phys101',
-            courseName: 'Physics 101',
-            courseCode: 'PHYS101',
-            mark: 92,
-            grade: 'A+',
-            semester: 'Semester 1',
-            year: 2024
-          },
-          {
-            id: '4',
-            studentId: currentUser.uid,
-            courseId: 'cs201',
-            courseName: 'Data Structures',
-            courseCode: 'CS201',
-            mark: 88,
-            grade: 'A',
-            semester: 'Semester 2',
-            year: 2024
-          },
-          {
-            id: '5',
-            studentId: currentUser.uid,
-            courseId: 'eng101',
-            courseName: 'English 101',
-            courseCode: 'ENG101',
-            mark: 75,
-            grade: 'B',
-            semester: 'Semester 2',
-            year: 2024
-          }
-        ];
-        
-        setResults(sampleResults);
+        const resultsData = await getResultsByStudent(currentUser.uid);
+        setResults(resultsData);
       } catch (error) {
         console.error('Error fetching results:', error);
       } finally {

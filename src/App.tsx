@@ -1,6 +1,8 @@
 import React from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { initializeDatabase } from './services/dataLoader';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
@@ -16,6 +18,21 @@ import StudentManagement from './pages/StudentManagement';
 import PaymentManagement from './pages/PaymentManagement';
 
 function App() {
+  useEffect(() => {
+    // Initialize database with mock data in development
+    if (import.meta.env.DEV) {
+      const shouldInitialize = localStorage.getItem('ics-db-initialized');
+      if (!shouldInitialize) {
+        initializeDatabase().then(() => {
+          localStorage.setItem('ics-db-initialized', 'true');
+          console.log('Database initialized with mock data');
+        }).catch(error => {
+          console.error('Failed to initialize database:', error);
+        });
+      }
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <Router>

@@ -1,55 +1,35 @@
 import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Clock, CheckCircle, AlertTriangle, MessageCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { createTicket } from '../services/database';
+import { createTicket, getTicketsByStudent } from '../services/database';
+import { TICKET_CATEGORIES } from '../data/constants';
 import { Ticket } from '../types';
 
 const Helpdesk: React.FC = () => {
   const { currentUser } = useAuth();
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showNewTicketForm, setShowNewTicketForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
-  // Sample ticket data
-  const tickets = [
-    {
-      id: 'TK-001',
-      title: 'Cannot access student portal',
-      description: 'I am unable to log into the student portal since yesterday',
-      category: 'technical',
-      priority: 'high',
-      status: 'open',
-      createdAt: '2025-01-15T10:30:00Z',
-      updatedAt: '2025-01-15T10:30:00Z',
-      studentId: currentUser?.uid || '',
-      response: null,
-    },
-    {
-      id: 'TK-002', 
-      title: 'Question about course registration',
-      description: 'I need help understanding the course registration process for next semester',
-      category: 'academic',
-      priority: 'medium',
-      status: 'in-progress',
-      createdAt: '2025-01-14T14:20:00Z',
-      updatedAt: '2025-01-15T09:15:00Z',
-      studentId: currentUser?.uid || '',
-      response: 'We have assigned an academic advisor to help you. They will contact you soon.',
-    },
-    {
-      id: 'TK-003',
-      title: 'Payment confirmation issue',
-      description: 'My payment was processed but not showing in my account',
-      category: 'finance',
-      priority: 'high',
-      status: 'resolved',
-      createdAt: '2025-01-13T11:45:00Z',
-      updatedAt: '2025-01-14T16:30:00Z',
-      studentId: currentUser?.uid || '',
-      response: 'Your payment has been verified and applied to your account. Thank you for your patience.',
-    },
-  ];
+  useEffect(() => {
+    const fetchTickets = async () => {
+      if (!currentUser) return;
+      
+      try {
+        const ticketsData = await getTicketsByStudent(currentUser.uid);
+        setTickets(ticketsData);
+      } catch (error) {
+        console.error('Error fetching tickets:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchTickets();
+  }, [currentUser]);
   const [newTicket, setNewTicket] = useState({
     title: '',
     description: '',
@@ -60,34 +40,33 @@ const Helpdesk: React.FC = () => {
   const handleCreateTicket = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt'> = {
+    const ticketData = {
       studentId: currentUser?.uid || '',
       title: newTicket.title,
       description: newTicket.description,
       category: newTicket.category,
       priority: newTicket.priority,
-      status: 'open',
     };
 
-    // Add to local state for immediate UI update
-    const newTicketWithId: Ticket = {
-      ...ticket,
-      id: `TK-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    // In a real app, you would call createTicket(ticket) here
-    // For now, we'll just update the local state
-    
-    setShowNewTicketForm(false);
-    setNewTicket({
-      title: '',
-      description: '',
-      category: 'general',
-      priority: 'medium',
-    });
-    alert('Support ticket created successfully!');
+    try {
+      createTicket(ticketData);
+      
+      // Refresh tickets list
+      const updatedTickets = await getTicketsByStudent(currentUser.uid);
+      setTickets(updatedTickets);
+      
+      setShowNewTicketForm(false);
+      setNewTicket({
+        title: '',
+        description: '',
+        category: 'general',
+        priority: 'medium',
+      });
+      alert('Support ticket created successfully!');
+    } catch (error) {
+      console.error('Error creating ticket:', error);
+      alert('Failed to create ticket. Please try again.');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -140,6 +119,14 @@ const Helpdesk: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -174,10 +161,11 @@ const Helpdesk: React.FC = () => {
                   onChange={(e) => setNewTicket({ ...newTicket, category: e.target.value as any })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="general">General</option>
-                  <option value="technical">Technical</option>
-                  <option value="academic">Academic</option>
-                  <option value="finance">Finance</option>
+                  {TICKET_CATEGORIES.map(category => (
+                    <option key={category} value={category}>
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </option>
+                  ))}
                 </select>
               </div>
               

@@ -3,6 +3,7 @@ import { User, Mail, Phone, MapPin, Calendar, Upload, Save, Edit } from 'lucide-
 import { useAuth } from '../context/AuthContext';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { COLLEGES, COURSES } from '../data/constants';
 import FileUpload from '../components/common/FileUpload';
 
 const Profile: React.FC = () => {
@@ -12,6 +13,7 @@ const Profile: React.FC = () => {
   const [profileData, setProfileData] = useState({
     firstName: currentUser?.profile?.firstName || '',
     lastName: currentUser?.profile?.lastName || '',
+    college: currentUser?.profile?.college || '',
     phone: currentUser?.profile?.phone || '',
     address: currentUser?.profile?.address || '',
     dateOfBirth: currentUser?.profile?.dateOfBirth || '',
@@ -165,6 +167,26 @@ const Profile: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
+                College/University
+              </label>
+              {editing ? (
+                <select
+                  value={profileData.college}
+                  onChange={(e) => setProfileData({ ...profileData, college: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select College/University</option>
+                  {COLLEGES.map(college => (
+                    <option key={college} value={college}>{college}</option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-gray-900">{profileData.college || 'Not provided'}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Phone Number
               </label>
               {editing ? (
@@ -235,12 +257,15 @@ const Profile: React.FC = () => {
                     Course
                   </label>
                   {editing ? (
-                    <input
-                      type="text"
+                    <select
                       value={profileData.course}
                       onChange={(e) => setProfileData({ ...profileData, course: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    >
+                      {COURSES.map(course => (
+                        <option key={course} value={course}>{course}</option>
+                      ))}
+                    </select>
                   ) : (
                     <p className="text-gray-900">{profileData.course || 'Not provided'}</p>
                   )}

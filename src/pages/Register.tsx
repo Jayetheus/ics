@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
+import { COLLEGES, COURSES } from '../data/constants';
+import { generateStudentNumber, generateStaffNumber } from '../services/dataLoader';
 import { Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 
 const Register: React.FC = () => {
@@ -12,9 +14,8 @@ const Register: React.FC = () => {
     role: 'student' as UserRole,
     firstName: '',
     lastName: '',
-    studentNumber: '',
-    staffNumber: '',
-    course: '',
+    college: '',
+    course: COURSES[0],
     year: 1,
     phone: '',
     idNumber: '',
@@ -45,15 +46,16 @@ const Register: React.FC = () => {
       const profileData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
+        college: formData.college,
         phone: formData.phone,
         idNumber: formData.idNumber,
         ...(formData.role === 'student' ? {
-          studentNumber: formData.studentNumber,
           course: formData.course,
           year: formData.year,
+          studentNumber: await generateStudentNumber(),
         } : {}),
         ...(formData.role !== 'student' ? {
-          staffNumber: formData.staffNumber,
+          staffNumber: await generateStaffNumber(),
         } : {}),
       };
 
@@ -117,6 +119,25 @@ const Register: React.FC = () => {
                 <option value="lecturer">Lecturer</option>
                 <option value="admin">Administrator</option>
                 <option value="finance">Finance Staff</option>
+              </select>
+            </div>
+
+            {/* College Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                College/University
+              </label>
+              <select
+                name="college"
+                required
+                value={formData.college}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select College/University</option>
+                {COLLEGES.map(college => (
+                  <option key={college} value={college}>{college}</option>
+                ))}
               </select>
             </div>
 
@@ -214,50 +235,41 @@ const Register: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Student Number
-                  </label>
-                  <input
-                    type="text"
-                    name="studentNumber"
-                    required
-                    value={formData.studentNumber}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g. 2024001234"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Course
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="course"
                     required
                     value={formData.course}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g. Computer Science"
-                  />
+                  >
+                    {COURSES.map(course => (
+                      <option key={course} value={course}>{course}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Year of Study
+                  </label>
+                  <select
+                    name="year"
+                    required
+                    value={formData.year}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value={1}>1st Year</option>
+                    <option value={2}>2nd Year</option>
+                    <option value={3}>3rd Year</option>
+                    <option value={4}>4th Year</option>
+                    <option value={5}>5th Year</option>
+                  </select>
                 </div>
               </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Staff Number
-                </label>
-                <input
-                  type="text"
-                  name="staffNumber"
-                  required
-                  value={formData.staffNumber}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g. STAFF001"
-                />
-              </div>
-            )}
+            ) : null}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -304,6 +316,9 @@ const Register: React.FC = () => {
               <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
                 Sign in here
               </Link>
+            </p>
+            <p className="text-xs text-gray-500 mt-2">
+              Student and staff numbers will be automatically generated upon registration.
             </p>
           </div>
         </div>

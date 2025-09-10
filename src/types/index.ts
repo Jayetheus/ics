@@ -11,6 +11,7 @@ export type UserRole = 'student' | 'lecturer' | 'admin' | 'finance';
 export interface UserProfile {
   firstName: string;
   lastName: string;
+  college?: string;
   studentNumber?: string;
   staffNumber?: string;
   course?: string;

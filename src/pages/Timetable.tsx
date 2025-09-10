@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, User, Download, Filter } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getTimetable } from '../services/database';
 import { Timetable as TimetableType } from '../types';
 
 const Timetable: React.FC = () => {
@@ -13,95 +14,8 @@ const Timetable: React.FC = () => {
   useEffect(() => {
     const fetchTimetable = async () => {
       try {
-        // Sample timetable data
-        const sampleTimetable: TimetableType[] = [
-          {
-            id: '1',
-            courseId: 'cs101',
-            courseName: 'Computer Science 101',
-            courseCode: 'CS101',
-            lecturer: 'Dr. Smith',
-            day: 'Monday',
-            startTime: '09:00',
-            endTime: '10:30',
-            venue: 'Lab A',
-            type: 'practical'
-          },
-          {
-            id: '2',
-            courseId: 'math101',
-            courseName: 'Mathematics 101',
-            courseCode: 'MATH101',
-            lecturer: 'Prof. Johnson',
-            day: 'Monday',
-            startTime: '11:00',
-            endTime: '12:30',
-            venue: 'Room 203',
-            type: 'lecture'
-          },
-          {
-            id: '3',
-            courseId: 'phys101',
-            courseName: 'Physics 101',
-            courseCode: 'PHYS101',
-            lecturer: 'Dr. Brown',
-            day: 'Tuesday',
-            startTime: '09:00',
-            endTime: '10:30',
-            venue: 'Lab B',
-            type: 'practical'
-          },
-          {
-            id: '4',
-            courseId: 'cs101',
-            courseName: 'Computer Science 101',
-            courseCode: 'CS101',
-            lecturer: 'Dr. Smith',
-            day: 'Tuesday',
-            startTime: '14:00',
-            endTime: '15:30',
-            venue: 'Room 101',
-            type: 'lecture'
-          },
-          {
-            id: '5',
-            courseId: 'eng101',
-            courseName: 'English 101',
-            courseCode: 'ENG101',
-            lecturer: 'Ms. Davis',
-            day: 'Wednesday',
-            startTime: '10:00',
-            endTime: '11:30',
-            venue: 'Room 205',
-            type: 'tutorial'
-          },
-          {
-            id: '6',
-            courseId: 'math101',
-            courseName: 'Mathematics 101',
-            courseCode: 'MATH101',
-            lecturer: 'Prof. Johnson',
-            day: 'Thursday',
-            startTime: '09:00',
-            endTime: '10:30',
-            venue: 'Room 203',
-            type: 'tutorial'
-          },
-          {
-            id: '7',
-            courseId: 'phys101',
-            courseName: 'Physics 101',
-            courseCode: 'PHYS101',
-            lecturer: 'Dr. Brown',
-            day: 'Friday',
-            startTime: '11:00',
-            endTime: '12:30',
-            venue: 'Room 301',
-            type: 'lecture'
-          }
-        ];
-        
-        setTimetable(sampleTimetable);
+        const timetableData = await getTimetable();
+        setTimetable(timetableData);
       } catch (error) {
         console.error('Error fetching timetable:', error);
       } finally {

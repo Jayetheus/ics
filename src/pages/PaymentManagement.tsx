@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Search, Filter, CheckCircle, X, Eye, Download } from 'lucide-react';
+import { getAllPayments, updatePaymentStatus } from '../services/database';
 import { Payment } from '../types';
 
 const PaymentManagement: React.FC = () => {
@@ -11,50 +12,8 @@ const PaymentManagement: React.FC = () => {
   useEffect(() => {
     const fetchPayments = async () => {
       try {
-        // Sample payment data
-        const samplePayments: Payment[] = [
-          {
-            id: '1',
-            studentId: 'student1',
-            amount: 15000,
-            type: 'tuition',
-            status: 'pending',
-            date: '2025-01-15',
-            description: 'Semester 1 Tuition Fee - John Doe',
-            proofOfPaymentUrl: 'https://example.com/proof1.pdf'
-          },
-          {
-            id: '2',
-            studentId: 'student2',
-            amount: 5000,
-            type: 'registration',
-            status: 'approved',
-            date: '2025-01-14',
-            description: 'Registration Fee 2025 - Sarah Wilson',
-            proofOfPaymentUrl: 'https://example.com/proof2.pdf'
-          },
-          {
-            id: '3',
-            studentId: 'student3',
-            amount: 8000,
-            type: 'accommodation',
-            status: 'pending',
-            date: '2025-01-13',
-            description: 'Residence Fee - Mike Johnson',
-          },
-          {
-            id: '4',
-            studentId: 'student4',
-            amount: 12000,
-            type: 'tuition',
-            status: 'rejected',
-            date: '2025-01-12',
-            description: 'Semester 1 Tuition Fee - Lisa Brown',
-            proofOfPaymentUrl: 'https://example.com/proof4.pdf'
-          }
-        ];
-        
-        setPayments(samplePayments);
+        const paymentsData = await getAllPayments();
+        setPayments(paymentsData);
       } catch (error) {
         console.error('Error fetching payments:', error);
       } finally {
@@ -65,10 +24,16 @@ const PaymentManagement: React.FC = () => {
     fetchPayments();
   }, []);
 
-  const handleStatusUpdate = (paymentId: string, newStatus: Payment['status']) => {
-    setPayments(payments.map(payment => 
-      payment.id === paymentId ? { ...payment, status: newStatus } : payment
-    ));
+  const handleStatusUpdate = async (paymentId: string, newStatus: Payment['status']) => {
+    try {
+      await updatePaymentStatus(paymentId, newStatus);
+      setPayments(payments.map(payment => 
+        payment.id === paymentId ? { ...payment, status: newStatus } : payment
+      ));
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      alert('Failed to update payment status');
+    }
   };
 
   const getStatusColor = (status: Payment['status']) => {
