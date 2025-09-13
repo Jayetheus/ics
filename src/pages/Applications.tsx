@@ -240,7 +240,9 @@ const Applications: React.FC = () => {
                     <div className="ml-4">
                       <h3 className="text-lg font-medium text-gray-900">{app.courseCode}</h3>
                       <p className="text-sm text-gray-600">
-                        Applied on {new Date(app.createdAt.toDate()).toLocaleDateString()}
+                        Applied on {app.createdAt && typeof app.createdAt.toDate === 'function'
+                          ? app.createdAt.toDate().toLocaleDateString()
+                          : new Date(app.createdAt as any).toLocaleDateString()}
                       </p>
                     </div>
                   </div>

@@ -39,7 +39,7 @@ const Finance: React.FC = () => {
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!newPayment.amount || !newPayment.description) {
+    if (!newPayment.amount || !newPayment.description || parseFloat(newPayment.amount) <= 0) {
       alert('Please fill in all required fields');
       return;
     }
@@ -51,7 +51,7 @@ const Finance: React.FC = () => {
       description: newPayment.description,
       proofOfPaymentUrl: newPayment.proofOfPaymentUrl,
       status: 'pending' as Payment['status'],
-      date: serverTimestamp() as Timestamp,
+      date: Timestamp.now(),
     };
 
     try {

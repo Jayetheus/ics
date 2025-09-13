@@ -35,16 +35,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setCurrentUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email!,
-            displayName: firebaseUser.displayName || undefined,
-            role: userData.role,
-            profile: userData.profile,
-          });
+        try {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setCurrentUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email!,
+              displayName: firebaseUser.displayName || undefined,
+              role: userData.role,
+              profile: userData.profile,
+            });
+          } else {
+            console.error('User document not found in Firestore');
+            setCurrentUser(null);
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setCurrentUser(null);
         }
       } else {
         setCurrentUser(null);

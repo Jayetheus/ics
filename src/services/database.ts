@@ -64,6 +64,17 @@ export const getResultsByStudent = async (studentId: string) => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Result));
 };
 
+// Get results by subject code for a student
+export const getResultsByStudentAndSubject = async (studentId: string, subjectCode: string) => {
+  const q = query(
+    collection(db, 'results'), 
+    where('studentId', '==', studentId),
+    where('subjectCode', '==', subjectCode)
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Result));
+};
+
 // Timetable
 export const createTimetableEntry = async (timetableData: Omit<Timetable, 'id'>) => {
   const docRef = await addDoc(collection(db, 'timetable'), timetableData);
@@ -79,7 +90,7 @@ export const getTimetable = async () => {
 export const createPayment = async (paymentData: Omit<Payment, 'id'>) => {
   const docRef = await addDoc(collection(db, 'payments'), {
     ...paymentData,
-    date: Timestamp.now(),
+    date: paymentData.date || Timestamp.now(),
   });
   return docRef.id;
 };

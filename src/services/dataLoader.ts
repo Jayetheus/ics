@@ -285,8 +285,10 @@ export const loadMockSubjects = async () => {
 // Load mock results
 export const loadMockResults = async () => {
   // Get students to assign results to
-  const studentsSnapshot = await getDocs(collection(db, 'students'));
-  const students = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const usersSnapshot = await getDocs(collection(db, 'users'));
+  const students = usersSnapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data() }))
+    .filter(user => (user as any).role === 'student');
 
   // Get subjects to assign results for
   const subjectsSnapshot = await getDocs(collection(db, 'subjects'));
@@ -299,7 +301,7 @@ export const loadMockResults = async () => {
 
   for (const student of students) {
     // Get subjects for the student's course
-    const studentCourse = (student as any).course;
+    const studentCourse = (student as any).profile?.course;
     const courseSubjects = subjects.filter(subject => (subject as any).courseCode === studentCourse);
     
     if (courseSubjects.length === 0) continue;
@@ -323,9 +325,8 @@ export const loadMockResults = async () => {
 
       const result = {
         studentId: student.id,
-        subjectId: subject.id,
-        subjectName: (subject as any).name,
-        subjectCode: (subject as any).code,
+        courseCode: (subject as any).code,
+        courseName: (subject as any).name,
         courseCode: (subject as any).courseCode,
         mark,
         grade,

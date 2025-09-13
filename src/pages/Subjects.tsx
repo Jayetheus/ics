@@ -37,7 +37,7 @@ const Subjects: React.FC = () => {
   }, [currentUser]);
 
   const getSubjectResult = (subjectCode: string) => {
-    return results.find(result => result.subjectCode === subjectCode);
+    return results.find(result => result.subjectCode === subjectCode || result.courseCode === subjectCode);
   };
 
   const semesters = [...new Set(subjects.map(s => s.semester))];

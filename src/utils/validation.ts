@@ -145,6 +145,12 @@ export const useFormValidation = (initialData: any, validationRules: { [key: str
     return Object.keys(newErrors).length === 0;
   }, [data, validationRules]);
 
+  const isFormValid = React.useMemo(() => {
+    const currentErrors = validateForm(data, validationRules);
+    return Object.keys(currentErrors).length === 0 && 
+           Object.keys(validationRules).every(field => data[field] && data[field].toString().trim() !== '');
+  }, [data, validationRules]);
+
   const handleChange = React.useCallback((field: string, value: any) => {
     setData(prev => ({ ...prev, [field]: value }));
     
@@ -195,7 +201,7 @@ export const useFormValidation = (initialData: any, validationRules: { [key: str
     handleSubmit,
     validate,
     reset,
-    isValid: Object.keys(errors).length === 0,
+    isValid: isFormValid,
   };
 };
 
