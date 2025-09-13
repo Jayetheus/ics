@@ -10,12 +10,15 @@ import {
   CheckCircle,
   AlertTriangle,
   Clock,
-  TrendingUp
+  TrendingUp,
+  ArrowRight,
+  User,
+  HelpCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { getResultsByStudent, getTimetable, getPaymentsByStudent } from '../../services/database';
-import { Result, Timetable, Payment } from '../../types';
+import { getResultsByStudent, getTimetable, getPaymentsByStudent, getApplicationsByStudent } from '../../services/database';
+import { Result, Timetable, Payment, Application } from '../../types';
 import { SkeletonDashboard, SkeletonCard } from '../common/Skeleton';
 import LoadingSpinner from '../common/LoadingSpinner';
 
@@ -26,8 +29,8 @@ const StudentDashboard: React.FC = () => {
   const [results, setResults] = useState<Result[]>([]);
   const [timetable, setTimetable] = useState<Timetable[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasRegistrationOrApplication, setHasRegistrationOrApplication] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
@@ -36,28 +39,17 @@ const StudentDashboard: React.FC = () => {
       
       try {
         setError(null);
-        const [resultsData, timetableData, paymentsData] = await Promise.all([
+        const [resultsData, timetableData, paymentsData, applicationsData] = await Promise.all([
           getResultsByStudent(currentUser.uid),
           getTimetable(),
-          getPaymentsByStudent(currentUser.uid)
+          getPaymentsByStudent(currentUser.uid),
+          getApplicationsByStudent(currentUser.uid)
         ]);
         
         setResults(resultsData);
         setTimetable(timetableData);
         setPayments(paymentsData);
-
-        // Simple gate: if user profile lacks course/year and no payments exist, send to applications
-        const noCourse = !(currentUser as any)?.profile?.course;
-        const noYear = !(currentUser as any)?.profile?.year;
-        const noPayments = paymentsData.length === 0;
-        const needsApplication = noCourse || noYear;
-        setHasRegistrationOrApplication(!needsApplication || !noPayments);
-        if (needsApplication && noPayments) {
-          navigate('/applications', { replace: true });
-        } else if (!needsApplication && noPayments) {
-          // Guide to finalize if approved app exists
-          // Keep dashboard accessible but could also prompt to /finalize-registration
-        }
+        setApplications(applicationsData);
       } catch (error: any) {
         console.error('Error fetching dashboard data:', error);
         setError(error.message || 'Failed to load dashboard data');
@@ -80,6 +72,11 @@ const StudentDashboard: React.FC = () => {
 
   // Get recent results (last 3)
   const recentResults = results.slice(0, 3);
+
+  // Check registration status
+  const hasApprovedApplication = applications.some(app => app.status === 'approved');
+  const hasActiveRegistration = currentUser?.profile?.course && currentUser?.profile?.year;
+  const needsApplication = !hasApprovedApplication && !hasActiveRegistration;
 
   // Calculate finance status
   const totalPaid = payments.filter(p => p.status === 'approved').reduce((sum, p) => sum + p.amount, 0);
@@ -114,6 +111,44 @@ const StudentDashboard: React.FC = () => {
     );
   }
 
+  // Show application prompt if needed
+  if (needsApplication && applications.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white text-center">
+          <User className="h-12 w-12 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Welcome to ICS!</h1>
+          <p className="opacity-90">Let's get you started with your academic journey</p>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm border p-8 text-center">
+          <BookOpen className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Apply for a Course</h2>
+          <p className="text-gray-600 mb-6">
+            To access your student dashboard and all features, you need to apply for a course first.
+          </p>
+          <button
+            onClick={() => navigate('/applications')}
+            className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Start Application
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </button>
+        </div>
+        
+        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <div className="flex items-start">
+            <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5 mr-3" />
+            <div className="text-sm text-blue-800">
+              <p className="font-medium">Need help?</p>
+              <p>Contact our support team if you have any questions about the application process.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
@@ -128,6 +163,27 @@ const StudentDashboard: React.FC = () => {
           Student Number: {currentUser?.profile?.studentNumber}
         </p>
       </div>
+
+      {/* Registration Status Alert */}
+      {hasApprovedApplication && !hasActiveRegistration && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+              <div>
+                <h3 className="font-medium text-green-900">Application Approved!</h3>
+                <p className="text-sm text-green-700">Complete your registration to access all features.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/finalize-registration')}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+            >
+              Complete Registration
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -323,22 +379,26 @@ const StudentDashboard: React.FC = () => {
         <div className="p-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <button className="flex flex-col items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+              onClick={() => navigate('/documents')}
               <Upload className="h-8 w-8 text-blue-600 mb-2" />
               <span className="text-sm font-medium text-blue-900">Upload Document</span>
             </button>
             
             <button className="flex flex-col items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+              onClick={() => navigate('/finance')}
               <CreditCard className="h-8 w-8 text-green-600 mb-2" />
               <span className="text-sm font-medium text-green-900">Make Payment</span>
             </button>
             
             <button className="flex flex-col items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+              onClick={() => navigate('/results')}
               <FileText className="h-8 w-8 text-purple-600 mb-2" />
               <span className="text-sm font-medium text-purple-900">View Results</span>
             </button>
             
             <button className="flex flex-col items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors">
-              <AlertTriangle className="h-8 w-8 text-orange-600 mb-2" />
+              onClick={() => navigate('/helpdesk')}
+              <HelpCircle className="h-8 w-8 text-orange-600 mb-2" />
               <span className="text-sm font-medium text-orange-900">Get Help</span>
             </button>
           </div>

@@ -11,7 +11,8 @@ import {
   Settings,
   BarChart3,
   Upload,
-  User
+  User,
+  CheckCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -35,6 +36,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
           ...baseItems,
           { icon: User, label: 'Profile', path: '/profile' },
           { icon: FileText, label: 'Applications', path: '/applications' },
+          { icon: CheckCircle, label: 'Finalize Registration', path: '/finalize-registration' },
           { icon: FileText, label: 'Results', path: '/results' },
           { icon: BookOpen, label: 'Subjects', path: '/subjects' },
           { icon: Calendar, label: 'Timetable', path: '/timetable' },
