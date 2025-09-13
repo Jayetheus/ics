@@ -188,12 +188,6 @@ export const getSubjectsByCourse = async (courseCode: string) => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
 };
 
-// Applications (admin)
-export const getAllApplications = async () => {
-  const querySnapshot = await getDocs(collection(db, 'applications'));
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
-};
-
 // Simple enrolled subjects storage per student
 export const enrollStudentSubjects = async (studentId: string, subjectCodes: string[]) => {
   const ref = doc(db, 'students', studentId);

@@ -77,7 +77,6 @@ const Subjects: React.FC = () => {
           </div>
         </div>
       </div>
-      </div>
 
       {/* Filter */}
       <div className="bg-white rounded-lg shadow-sm border p-6">
