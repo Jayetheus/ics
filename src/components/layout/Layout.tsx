@@ -32,9 +32,9 @@ const Layout: React.FC = () => {
       )}
       
       <div className="lg:ml-64 pt-16">
-        <main className="p-4 sm:p-6">
+        <main className="p-4 pt-4 sm:p-6">
           <div className="max-w-7xl mx-auto">
-            <Outlet />
+            <Outlet/>
           </div>
         </main>
       </div>

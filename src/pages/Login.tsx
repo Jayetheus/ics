@@ -38,7 +38,7 @@ const Login: React.FC = () => {
         message: 'Welcome back! You have been logged in successfully.',
       });
       
-      navigate('/dashboard', { replace: true });
+      navigate("/", { replace: true });
     } catch (error: any) {
       addNotification({
         type: 'error',

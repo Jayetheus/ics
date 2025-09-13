@@ -13,7 +13,6 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from './firebase';
 import { COLLEGES, COURSES, DEPARTMENTS, PAYMENT_TYPES, TICKET_CATEGORIES, CLASS_TYPES, SEMESTERS, COURSE_SUBJECTS } from '../data/constants';
 import { User, Student, Course, Result, Timetable, Payment, Ticket, Asset, UserRole, Subject } from '../types';
-import { addDoc, collection } from 'firebase/firestore';
 
 // Generate student number in format: YYYY + sequential number (e.g., 2024001234)
 export const generateStudentNumber = async (): Promise<string> => {

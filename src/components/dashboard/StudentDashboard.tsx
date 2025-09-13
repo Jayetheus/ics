@@ -378,30 +378,30 @@ const StudentDashboard: React.FC = () => {
         </div>
         <div className="p-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="flex flex-col items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+            <button className="flex flex-col items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
               onClick={() => navigate('/documents')}
-              onClick={() => navigate('/documents')}
+            >
               <Upload className="h-8 w-8 text-blue-600 mb-2" />
               <span className="text-sm font-medium text-blue-900">Upload Document</span>
             </button>
             
-            <button className="flex flex-col items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+            <button className="flex flex-col items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
               onClick={() => navigate('/finance')}
-              onClick={() => navigate('/finance')}
+            >
               <CreditCard className="h-8 w-8 text-green-600 mb-2" />
               <span className="text-sm font-medium text-green-900">Make Payment</span>
             </button>
             
-            <button className="flex flex-col items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+            <button className="flex flex-col items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
               onClick={() => navigate('/results')}
-              onClick={() => navigate('/results')}
+            >
               <FileText className="h-8 w-8 text-purple-600 mb-2" />
               <span className="text-sm font-medium text-purple-900">View Results</span>
             </button>
             
-            <button className="flex flex-col items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors">
-              onClick={() => navigate('/helpdesk')}
-              onClick={() => navigate('/helpdesk')}
+            <button className="flex flex-col items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
+              onClick={() => navigate('/helpdesk')}            
+            >
               <HelpCircle className="h-8 w-8 text-orange-600 mb-2" />
               <span className="text-sm font-medium text-orange-900">Get Help</span>
             </button>
