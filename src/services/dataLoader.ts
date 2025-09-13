@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from './firebase';
-import { COLLEGES, COURSES, DEPARTMENTS, PAYMENT_TYPES, TICKET_CATEGORIES, CLASS_TYPES, SEMESTERS } from '../data/constants';
+import { COLLEGES, COURSES, DEPARTMENTS, PAYMENT_TYPES, TICKET_CATEGORIES, CLASS_TYPES, SEMESTERS, COURSE_SUBJECTS } from '../data/constants';
 import { User, Student, Course, Result, Timetable, Payment, Ticket, Asset, UserRole, Subject } from '../types';
 import { addDoc, collection } from 'firebase/firestore';
 
@@ -38,7 +38,7 @@ export const generateStaffNumber = async (): Promise<string> => {
 
 // Clear all collections
 export const clearAllData = async () => {
-  const collections = ['users', 'students', 'courses', 'results', 'timetable', 'payments', 'tickets', 'assets'];
+  const collections = ['users', 'students', 'courses', 'subjects', 'results', 'timetable', 'payments', 'tickets', 'assets'];
   
   for (const collectionName of collections) {
     const collectionRef = collection(db, collectionName);
@@ -268,26 +268,18 @@ export const loadMockCourses = async () => {
 
 // Load mock subjects per course
 export const loadMockSubjects = async () => {
-  const subjectsByCourse: Record<string, Omit<Subject, 'id'>[]> = {
-    'CS101': [
-      { courseCode: 'CS101', code: 'CS101-1', name: 'Programming Basics', credits: 8, semester: 'Semester 1' },
-      { courseCode: 'CS101', code: 'CS101-2', name: 'Computer Systems', credits: 8, semester: 'Semester 1' },
-    ],
-    'IT201': [
-      { courseCode: 'IT201', code: 'IT201-1', name: 'SQL and Modeling', credits: 8, semester: 'Semester 1' },
-      { courseCode: 'IT201', code: 'IT201-2', name: 'NoSQL and Scaling', credits: 8, semester: 'Semester 2' },
-    ],
-    'BUS301': [
-      { courseCode: 'BUS301', code: 'BUS301-1', name: 'Corporate Strategy', credits: 8, semester: 'Semester 1' },
-      { courseCode: 'BUS301', code: 'BUS301-2', name: 'Operations Strategy', credits: 8, semester: 'Semester 2' },
-    ],
-  };
-
-  for (const list of Object.values(subjectsByCourse)) {
-    for (const subject of list) {
-      await addDoc(collection(db, 'subjects'), subject);
+  for (const [courseName, subjects] of Object.entries(COURSE_SUBJECTS)) {
+    for (const subject of subjects) {
+      await addDoc(collection(db, 'subjects'), {
+        courseCode: courseName,
+        code: subject.code,
+        name: subject.name,
+        credits: subject.credits,
+        semester: subject.semester
+      });
     }
   }
+  console.log('Created subjects for all courses');
 };
 
 // Load mock results
@@ -295,22 +287,28 @@ export const loadMockResults = async () => {
   // Get students to assign results to
   const studentsSnapshot = await getDocs(collection(db, 'students'));
   const students = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  
-  // Get courses to assign results for
-  const coursesSnapshot = await getDocs(collection(db, 'courses'));
-  const courses = coursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-  if (students.length === 0 || courses.length === 0) {
-    console.log('No students or courses found. Skipping results creation.');
+  // Get subjects to assign results for
+  const subjectsSnapshot = await getDocs(collection(db, 'subjects'));
+  const subjects = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  if (students.length === 0 || subjects.length === 0) {
+    console.log('No students or subjects found. Skipping results creation.');
     return;
   }
 
   for (const student of students) {
+    // Get subjects for the student's course
+    const studentCourse = (student as any).course;
+    const courseSubjects = subjects.filter(subject => (subject as any).courseCode === studentCourse);
+    
+    if (courseSubjects.length === 0) continue;
+
     // Create 3-5 results per student
     const numResults = Math.floor(Math.random() * 3) + 3;
-    const selectedCourses = courses.slice(0, numResults);
+    const selectedSubjects = courseSubjects.slice(0, Math.min(numResults, courseSubjects.length));
 
-    for (const course of selectedCourses) {
+    for (const subject of selectedSubjects) {
       const mark = Math.floor(Math.random() * 40) + 60; // 60-100
       let grade = 'F';
       
@@ -325,12 +323,13 @@ export const loadMockResults = async () => {
 
       const result = {
         studentId: student.id,
-        courseId: course.id,
-        courseName: course.name,
-        courseCode: course.code,
+        subjectId: subject.id,
+        subjectName: (subject as any).name,
+        subjectCode: (subject as any).code,
+        courseCode: (subject as any).courseCode,
         mark,
         grade,
-        semester: SEMESTERS[Math.floor(Math.random() * SEMESTERS.length)],
+        semester: (subject as any).semester,
         year: 2024
       };
 
@@ -343,21 +342,22 @@ export const loadMockResults = async () => {
 
 // Load mock timetable
 export const loadMockTimetable = async () => {
-  const coursesSnapshot = await getDocs(collection(db, 'courses'));
-  const courses = coursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const subjectsSnapshot = await getDocs(collection(db, 'subjects'));
+  const subjects = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-  if (courses.length === 0) {
-    console.log('No courses found. Skipping timetable creation.');
+  if (subjects.length === 0) {
+    console.log('No subjects found. Skipping timetable creation.');
     return;
   }
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
   const times = ['09:00', '11:00', '14:00', '16:00'];
   const venues = ['Room 101', 'Room 203', 'Lab A', 'Lab B', 'Auditorium', 'Library Hall'];
+  const lecturers = ['Dr. Sarah Smith', 'Prof. Michael Johnson', 'Dr. Lisa Brown', 'Prof. James Wilson', 'Dr. Anna Davis'];
 
-  for (const course of courses) {
-    // Create 2-3 time slots per course
-    const numSlots = Math.floor(Math.random() * 2) + 2;
+  for (const subject of subjects) {
+    // Create 1-2 time slots per subject
+    const numSlots = Math.floor(Math.random() * 2) + 1;
     
     for (let i = 0; i < numSlots; i++) {
       const day = days[Math.floor(Math.random() * days.length)];
@@ -366,10 +366,11 @@ export const loadMockTimetable = async () => {
       const endTime = `${(startHour + 1).toString().padStart(2, '0')}:30`;
       
       const timetableEntry = {
-        courseId: course.id,
-        courseName: course.name,
-        courseCode: course.code,
-        lecturer: course.lecturer,
+        subjectId: subject.id,
+        subjectName: (subject as any).name,
+        subjectCode: (subject as any).code,
+        courseCode: (subject as any).courseCode,
+        lecturer: lecturers[Math.floor(Math.random() * lecturers.length)],
         day,
         startTime,
         endTime,
@@ -567,12 +568,12 @@ export const loadAllMockData = async () => {
     await loadMockUsers();
     await loadMockStudents();
     await loadMockCourses();
+    await loadMockSubjects();
     await loadMockResults();
     await loadMockTimetable();
     await loadMockPayments();
     await loadMockTickets();
     await loadMockAssets();
-    await loadMockSubjects();
     
     console.log('All mock data loaded successfully!');
   } catch (error) {

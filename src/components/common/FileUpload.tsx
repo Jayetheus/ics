@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, File, Image, FileText } from 'lucide-react';
+import { Upload, X, File, Image, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import { uploadFile } from '../../services/storage';
+import { useNotification } from '../../context/NotificationContext';
+import LoadingSpinner from './LoadingSpinner';
 
 interface FileUploadProps {
   onUpload: (fileData: any) => void;
@@ -21,32 +23,58 @@ const FileUpload: React.FC<FileUploadProps> = ({
 }) => {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { addNotification } = useNotification();
 
   const handleFileSelect = async (files: FileList | null) => {
     if (!files) return;
 
     const fileArray = Array.from(files);
+    const validFiles: File[] = [];
     
+    // Validate files first
     for (const file of fileArray) {
       if (file.size > maxSize * 1024 * 1024) {
-        alert(`File ${file.name} is too large. Maximum size is ${maxSize}MB.`);
+        addNotification({
+          type: 'error',
+          title: 'File Too Large',
+          message: `File ${file.name} is too large. Maximum size is ${maxSize}MB.`,
+        });
         continue;
       }
+      validFiles.push(file);
+    }
 
-      try {
-        setUploading(true);
+    if (validFiles.length === 0) return;
+
+    setUploading(true);
+    setUploadedFiles(validFiles);
+
+    try {
+      for (const file of validFiles) {
         const uploadedFile = await uploadFile(file, folder);
         onUpload(uploadedFile);
-      } catch (error) {
-        console.error('Upload failed:', error);
-        alert(`Failed to upload ${file.name}`);
       }
-    }
-    
-    setUploading(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      
+      addNotification({
+        type: 'success',
+        title: 'Upload Successful',
+        message: `Successfully uploaded ${validFiles.length} file(s).`,
+      });
+    } catch (error: any) {
+      console.error('Upload failed:', error);
+      addNotification({
+        type: 'error',
+        title: 'Upload Failed',
+        message: error.message || 'Failed to upload files. Please try again.',
+      });
+    } finally {
+      setUploading(false);
+      setUploadedFiles([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -96,8 +124,13 @@ const FileUpload: React.FC<FileUploadProps> = ({
       >
         {uploading ? (
           <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-600">Uploading...</p>
+            <LoadingSpinner size="lg" className="mb-4" />
+            <p className="text-gray-600 mb-2">Uploading...</p>
+            {uploadedFiles.length > 0 && (
+              <div className="text-sm text-gray-500">
+                Uploading {uploadedFiles.length} file(s)...
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center">

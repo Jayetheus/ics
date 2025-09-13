@@ -187,3 +187,181 @@ export const getSubjectsByCourse = async (courseCode: string) => {
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
 };
+
+// Applications (admin)
+export const getAllApplications = async () => {
+  const querySnapshot = await getDocs(collection(db, 'applications'));
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
+};
+
+// Simple enrolled subjects storage per student
+export const enrollStudentSubjects = async (studentId: string, subjectCodes: string[]) => {
+  const ref = doc(db, 'students', studentId);
+  await updateDoc(ref, { enrolledSubjects: subjectCodes });
+};
+
+// Populate subjects for a course
+export const populateSubjectsForCourse = async (courseName: string) => {
+  const { COURSE_SUBJECTS } = await import('../data/constants');
+  const subjects = COURSE_SUBJECTS[courseName as keyof typeof COURSE_SUBJECTS];
+  
+  if (!subjects) {
+    throw new Error(`No subjects defined for course: ${courseName}`);
+  }
+
+  const subjectPromises = subjects.map(subject => 
+    createSubject({
+      courseCode: courseName,
+      code: subject.code,
+      name: subject.name,
+      credits: subject.credits,
+      semester: subject.semester
+    })
+  );
+
+  return Promise.all(subjectPromises);
+};
+
+// Get all subjects
+export const getAllSubjects = async () => {
+  const querySnapshot = await getDocs(collection(db, 'subjects'));
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
+};
+
+// Update subject
+export const updateSubject = async (id: string, data: Partial<Subject>) => {
+  const docRef = doc(db, 'subjects', id);
+  await updateDoc(docRef, data);
+};
+
+// Delete subject
+export const deleteSubject = async (id: string) => {
+  const docRef = doc(db, 'subjects', id);
+  await deleteDoc(docRef);
+};
+
+// Update course
+export const updateCourse = async (id: string, data: Partial<Course>) => {
+  const docRef = doc(db, 'courses', id);
+  await updateDoc(docRef, data);
+};
+
+// Delete course
+export const deleteCourse = async (id: string) => {
+  const docRef = doc(db, 'courses', id);
+  await deleteDoc(docRef);
+};
+
+// Update result
+export const updateResult = async (id: string, data: Partial<Result>) => {
+  const docRef = doc(db, 'results', id);
+  await updateDoc(docRef, data);
+};
+
+// Delete result
+export const deleteResult = async (id: string) => {
+  const docRef = doc(db, 'results', id);
+  await deleteDoc(docRef);
+};
+
+// Update timetable entry
+export const updateTimetableEntry = async (id: string, data: Partial<Timetable>) => {
+  const docRef = doc(db, 'timetable', id);
+  await updateDoc(docRef, data);
+};
+
+// Delete timetable entry
+export const deleteTimetableEntry = async (id: string) => {
+  const docRef = doc(db, 'timetable', id);
+  await deleteDoc(docRef);
+};
+
+// Delete payment
+export const deletePayment = async (id: string) => {
+  const docRef = doc(db, 'payments', id);
+  await deleteDoc(docRef);
+};
+
+// Delete ticket
+export const deleteTicket = async (id: string) => {
+  const docRef = doc(db, 'tickets', id);
+  await deleteDoc(docRef);
+};
+
+// Delete application
+export const deleteApplication = async (id: string) => {
+  const docRef = doc(db, 'applications', id);
+  await deleteDoc(docRef);
+};
+
+// Get all applications (for admin)
+export const getAllApplications = async () => {
+  const q = query(collection(db, 'applications'), orderBy('createdAt', 'desc'));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
+};
+
+// Get all tickets (for admin)
+export const getAllTickets = async () => {
+  const q = query(collection(db, 'tickets'), orderBy('createdAt', 'desc'));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
+};
+
+// Get tickets by status
+export const getTicketsByStatus = async (status: Ticket['status']) => {
+  const q = query(
+    collection(db, 'tickets'), 
+    where('status', '==', status),
+    orderBy('createdAt', 'desc')
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
+};
+
+// Get payments by status
+export const getPaymentsByStatus = async (status: Payment['status']) => {
+  const q = query(
+    collection(db, 'payments'), 
+    where('status', '==', status),
+    orderBy('date', 'desc')
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
+};
+
+// Get results by course
+export const getResultsByCourse = async (courseCode: string) => {
+  const q = query(collection(db, 'results'), where('courseCode', '==', courseCode));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Result));
+};
+
+// Get timetable by day
+export const getTimetableByDay = async (day: string) => {
+  const q = query(collection(db, 'timetable'), where('day', '==', day));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Timetable));
+};
+
+// Get assets by category
+export const getAssetsByCategory = async (category: Asset['category']) => {
+  const q = query(
+    collection(db, 'assets'), 
+    where('category', '==', category),
+    orderBy('uploadedAt', 'desc')
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Asset));
+};
+
+// Get assets by uploader
+export const getAssetsByUploader = async (uploadedBy: string) => {
+  const q = query(
+    collection(db, 'assets'), 
+    where('uploadedBy', '==', uploadedBy),
+    orderBy('uploadedAt', 'desc')
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Asset));
+};

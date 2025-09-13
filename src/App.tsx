@@ -1,7 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import NotificationContainer from './components/common/NotificationContainer';
+import { useNotification } from './context/NotificationContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -26,11 +30,15 @@ import Settings from './pages/Settings';
 import StudentFinance from './pages/StudentFinance';
 import FinancialReports from './pages/FinancialReports';
 import PaymentProofs from './pages/PaymentProofs';
+import ApplicationsManagement from './pages/ApplicationsManagement';
+import FinalizeRegistration from './pages/FinalizeRegistration';
+import Subjects from './pages/Subjects';
 
-function App() {
-  
+const AppContent: React.FC = () => {
+  const { notifications, removeNotification } = useNotification();
+
   return (
-    <AuthProvider>
+    <>
       <Router>
         <Routes>
           {/* Public routes */}
@@ -56,6 +64,16 @@ function App() {
             <Route path="applications" element={
               <ProtectedRoute allowedRoles={['student']}>
                 <Applications />
+              </ProtectedRoute>
+            } />
+            <Route path="finalize-registration" element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <FinalizeRegistration />
+              </ProtectedRoute>
+            } />
+            <Route path="subjects" element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <Subjects />
               </ProtectedRoute>
             } />
             <Route path="results" element={
@@ -130,6 +148,11 @@ function App() {
                 <HelpdeskManagement />
               </ProtectedRoute>
             } />
+            <Route path="applications-management" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ApplicationsManagement />
+              </ProtectedRoute>
+            } />
             <Route path="settings" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <Settings />
@@ -173,7 +196,23 @@ function App() {
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
-    </AuthProvider>
+      <NotificationContainer
+        notifications={notifications}
+        onRemoveNotification={removeNotification}
+      />
+    </>
+  );
+};
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <NotificationProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </NotificationProvider>
+    </ErrorBoundary>
   );
 }
 

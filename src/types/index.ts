@@ -45,13 +45,15 @@ export interface Course {
   credits: number;
   lecturer: string;
   department: string;
+  subjects?: Subject[];
 }
 
 export interface Result {
   id: string;
   studentId: string;
-  courseId: string;
-  courseName: string;
+  subjectId: string;
+  subjectName: string;
+  subjectCode: string;
   courseCode: string;
   mark: number;
   grade: string;
@@ -61,8 +63,9 @@ export interface Result {
 
 export interface Timetable {
   id: string;
-  courseId: string;
-  courseName: string;
+  subjectId: string;
+  subjectName: string;
+  subjectCode: string;
   courseCode: string;
   lecturer: string;
   day: string;

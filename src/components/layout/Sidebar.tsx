@@ -36,6 +36,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
           { icon: User, label: 'Profile', path: '/profile' },
           { icon: FileText, label: 'Applications', path: '/applications' },
           { icon: FileText, label: 'Results', path: '/results' },
+          { icon: BookOpen, label: 'Subjects', path: '/subjects' },
           { icon: Calendar, label: 'Timetable', path: '/timetable' },
           { icon: CreditCard, label: 'Finance', path: '/finance' },
           { icon: Upload, label: 'Documents', path: '/documents' },
@@ -91,11 +92,16 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       )}
 
       {/* Sidebar */}
-      <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out
-        lg:translate-x-0 lg:static lg:inset-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
+      <div 
+        id="sidebar"
+        className={`
+          fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out
+          lg:translate-x-0 lg:static lg:inset-0
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+        role="navigation"
+        aria-label="Main navigation"
+      >
         <div className="flex flex-col h-full pt-16">
           <div className="flex-1 flex flex-col overflow-y-auto">
             <nav className="flex-1 px-4 py-6 space-y-2">
@@ -109,12 +115,13 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
                     to={item.path}
                     onClick={() => setSidebarOpen(false)}
                     className={`
-                      flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors
+                      flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500
                       ${isActive 
                         ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' 
                         : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                       }
                     `}
+                    aria-current={isActive ? 'page' : undefined}
                   >
                     <Icon className={`mr-3 h-5 w-5 ${isActive ? 'text-blue-700' : 'text-gray-400'}`} />
                     {item.label}

@@ -15,16 +15,16 @@ const LecturerDashboard: React.FC = () => {
   const { currentUser } = useAuth();
   
   // Sample data
-  const courses = [
-    { code: 'CS101', name: 'Computer Science 101', students: 45, nextClass: '09:00 - Monday' },
-    { code: 'CS201', name: 'Data Structures', students: 32, nextClass: '11:00 - Tuesday' },
+  const subjects = [
+    { code: 'CS101', name: 'Introduction to Programming', students: 45, nextClass: '09:00 - Monday' },
+    { code: 'CS201', name: 'Object-Oriented Programming', students: 32, nextClass: '11:00 - Tuesday' },
     { code: 'CS301', name: 'Software Engineering', students: 28, nextClass: '14:00 - Wednesday' },
   ];
 
   const todaysSchedule = [
-    { time: '09:00-10:30', course: 'CS101', type: 'Lecture', room: 'Room 101', students: 45 },
-    { time: '11:00-12:30', course: 'CS201', type: 'Practical', room: 'Lab A', students: 32 },
-    { time: '14:00-15:30', course: 'CS301', type: 'Tutorial', room: 'Room 203', students: 28 },
+    { time: '09:00-10:30', subject: 'CS101', type: 'Lecture', room: 'Room 101', students: 45 },
+    { time: '11:00-12:30', subject: 'CS201', type: 'Practical', room: 'Lab A', students: 32 },
+    { time: '14:00-15:30', subject: 'CS301', type: 'Tutorial', room: 'Room 203', students: 28 },
   ];
 
   const pendingTasks = [
@@ -36,7 +36,7 @@ const LecturerDashboard: React.FC = () => {
 
   const stats = {
     totalStudents: 105,
-    activeCourses: 3,
+    activeSubjects: 3,
     pendingGrades: 63,
     avgAttendance: 87,
   };
@@ -74,8 +74,8 @@ const LecturerDashboard: React.FC = () => {
               <BookOpen className="h-6 w-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-600">Active Courses</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.activeCourses}</p>
+              <p className="text-sm text-gray-600">Active Subjects</p>
+              <p className="text-2xl font-semibold text-gray-900">{stats.activeSubjects}</p>
             </div>
           </div>
         </div>
@@ -106,26 +106,26 @@ const LecturerDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* My Courses */}
+        {/* My Subjects */}
         <div className="bg-white rounded-lg shadow-sm border">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center">
               <BookOpen className="h-5 w-5 mr-2 text-green-600" />
-              My Courses
+              My Subjects
             </h2>
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {courses.map((course, index) => (
+              {subjects.map((subject, index) => (
                 <div key={index} className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium text-gray-900">{course.code}</h3>
-                      <p className="text-sm text-gray-600">{course.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">{course.students} students enrolled</p>
+                      <h3 className="font-medium text-gray-900">{subject.code}</h3>
+                      <p className="text-sm text-gray-600">{subject.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">{subject.students} students enrolled</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-blue-600">{course.nextClass}</p>
+                      <p className="text-sm font-medium text-blue-600">{subject.nextClass}</p>
                       <p className="text-xs text-gray-500">Next class</p>
                     </div>
                   </div>
@@ -152,7 +152,7 @@ const LecturerDashboard: React.FC = () => {
                       {class_.time}
                     </div>
                     <div className="ml-4">
-                      <p className="font-medium text-gray-900">{class_.course}</p>
+                      <p className="font-medium text-gray-900">{class_.subject}</p>
                       <p className="text-sm text-gray-600">{class_.room} • {class_.type}</p>
                       <p className="text-xs text-gray-500">{class_.students} students</p>
                     </div>

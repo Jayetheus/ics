@@ -17,7 +17,7 @@ const AdminDashboard: React.FC = () => {
   const stats = {
     totalStudents: 1247,
     activeStaff: 89,
-    totalCourses: 45,
+    totalSubjects: 45,
     pendingApplications: 23,
     monthlyRevenue: 2340000,
     outstandingPayments: 890000,
@@ -27,12 +27,12 @@ const AdminDashboard: React.FC = () => {
     { type: 'registration', message: 'New student registration: John Doe', time: '2 hours ago', status: 'pending' },
     { type: 'payment', message: 'Payment received: R15,000', time: '4 hours ago', status: 'completed' },
     { type: 'support', message: 'New support ticket from student ID 2024001', time: '6 hours ago', status: 'pending' },
-    { type: 'course', message: 'Course schedule updated: Computer Science 101', time: '1 day ago', status: 'completed' },
+    { type: 'subject', message: 'Subject schedule updated: Introduction to Programming', time: '1 day ago', status: 'completed' },
   ];
 
   const pendingApprovals = [
     { id: 1, type: 'Student Registration', name: 'Sarah Williams', course: 'Engineering', date: '2025-01-15' },
-    { id: 2, type: 'Course Change', name: 'Mike Johnson', course: 'Business Studies', date: '2025-01-14' },
+    { id: 2, type: 'Subject Change', name: 'Mike Johnson', course: 'Business Studies', date: '2025-01-14' },
     { id: 3, type: 'Payment Verification', name: 'Lisa Brown', amount: 'R12,500', date: '2025-01-14' },
   ];
 
@@ -66,8 +66,8 @@ const AdminDashboard: React.FC = () => {
               <BookOpen className="h-6 w-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-600">Active Courses</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.totalCourses}</p>
+              <p className="text-sm text-gray-600">Active Subjects</p>
+              <p className="text-2xl font-semibold text-gray-900">{stats.totalSubjects}</p>
               <p className="text-xs text-gray-500">Across 8 departments</p>
             </div>
           </div>
@@ -212,7 +212,7 @@ const AdminDashboard: React.FC = () => {
             
             <button className="flex flex-col items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
               <BookOpen className="h-8 w-8 text-green-600 mb-2" />
-              <span className="text-sm font-medium text-green-900">Course Management</span>
+              <span className="text-sm font-medium text-green-900">Subject Management</span>
             </button>
             
             <button className="flex flex-col items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
