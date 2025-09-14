@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { BookOpen, Calendar, Award, Users, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getSubjectsByCourse, getStudentById, getResultsByStudent } from '../services/database';
+import { getStudentSubjectsWithResults, getStudentById, getStudentAcademicProgress } from '../services/database';
 import { Subject, Result } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import { useNotification } from '../context/NotificationContext';
 
 const Subjects: React.FC = () => {
   const { currentUser } = useAuth();
+  const { addNotification } = useNotification();
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [results, setResults] = useState<Result[]>([]);
+  const [academicProgress, setAcademicProgress] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedSemester, setSelectedSemester] = useState<string>('all');
 
@@ -16,19 +18,19 @@ const Subjects: React.FC = () => {
     const load = async () => {
       if (!currentUser) return;
       try {
-        const student = await getStudentById(currentUser.uid);
-        const courseCode = (student as any)?.course || (currentUser as any)?.profile?.course?.code || (currentUser as any)?.profile?.course;
-        
-        if (courseCode) {
-          const [subs, studentResults] = await Promise.all([
-            getSubjectsByCourse(courseCode),
-            getResultsByStudent(currentUser.uid)
-          ]);
-          setSubjects(subs);
-          setResults(studentResults);
-        }
+        const [subjectsWithResults, progressData] = await Promise.all([
+          getStudentSubjectsWithResults(currentUser.uid),
+          getStudentAcademicProgress(currentUser.uid)
+        ]);
+        setSubjects(subjectsWithResults);
+        setAcademicProgress(progressData);
       } catch (error) {
         console.error('Error loading subjects:', error);
+        addNotification({
+          type: 'error',
+          title: 'Loading Error',
+          message: 'Failed to load subjects. Please try again.'
+        });
       } finally {
         setLoading(false);
       }
@@ -36,17 +38,13 @@ const Subjects: React.FC = () => {
     load();
   }, [currentUser]);
 
-  const getSubjectResult = (subjectCode: string) => {
-    return results.find(result => result.subjectCode === subjectCode || result.courseCode === subjectCode);
-  };
-
   const semesters = [...new Set(subjects.map(s => s.semester))];
   const filteredSubjects = selectedSemester === 'all' 
     ? subjects 
     : subjects.filter(s => s.semester === selectedSemester);
 
   const totalCredits = filteredSubjects.reduce((sum, s) => sum + s.credits, 0);
-  const completedSubjects = filteredSubjects.filter(s => getSubjectResult(s.code)).length;
+  const completedSubjects = filteredSubjects.filter(s => s.result).length;
 
   if (loading) {
     return (
@@ -73,6 +71,12 @@ const Subjects: React.FC = () => {
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">{completedSubjects}</div>
               <div className="text-gray-600">Completed</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {academicProgress?.gpa || 0}%
+              </div>
+              <div className="text-gray-600">Average Grade</div>
             </div>
           </div>
         </div>
@@ -104,7 +108,7 @@ const Subjects: React.FC = () => {
       {filteredSubjects.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSubjects.map(subject => {
-            const result = getSubjectResult(subject.code);
+            const result = subject.result;
             return (
               <div key={subject.id} className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow">
                 <div className="p-6">
@@ -161,6 +165,11 @@ const Subjects: React.FC = () => {
                         </button>
                       )}
                     </div>
+                    {result && (
+                      <div className="mt-2 text-xs text-gray-600">
+                        Grade: {result.grade} • {result.mark >= 50 ? 'Passed' : 'Failed'}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -189,22 +198,39 @@ const Subjects: React.FC = () => {
               <div className="text-sm text-gray-600">Total Subjects</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{results.length}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {subjects.filter(s => s.result).length}
+              </div>
               <div className="text-sm text-gray-600">Results Available</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {results.length > 0 ? Math.round(results.reduce((sum, r) => sum + r.mark, 0) / results.length) : 0}%
+                {academicProgress?.gpa || 0}%
               </div>
               <div className="text-sm text-gray-600">Average Grade</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-orange-600">
-                {subjects.reduce((sum, s) => sum + s.credits, 0)}
+                {academicProgress?.totalCredits || subjects.reduce((sum, s) => sum + s.credits, 0)}
               </div>
               <div className="text-sm text-gray-600">Total Credits</div>
             </div>
           </div>
+          
+          {academicProgress && (
+            <div className="mt-6">
+              <div className="bg-gray-200 rounded-full h-3">
+                <div 
+                  className="bg-green-600 h-3 rounded-full"
+                  style={{ width: `${(academicProgress.completedCredits / academicProgress.totalCredits) * 100}%` }}
+                ></div>
+              </div>
+              <p className="text-sm text-gray-600 mt-2 text-center">
+                {academicProgress.completedCredits} of {academicProgress.totalCredits} credits completed 
+                ({Math.round((academicProgress.completedCredits / academicProgress.totalCredits) * 100)}%)
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

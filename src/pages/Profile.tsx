@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Upload, Save, Edit } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { updateDoc, doc } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { updateStudentProfile } from '../services/database';
 import { COLLEGES, COURSES } from '../data/constants';
 import FileUpload from '../components/common/FileUpload';
+import { useNotification } from '../context/NotificationContext';
 
 const Profile: React.FC = () => {
   const { currentUser } = useAuth();
+  const { addNotification } = useNotification();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -29,15 +30,20 @@ const Profile: React.FC = () => {
     
     try {
       setLoading(true);
-      const userRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userRef, {
-        profile: profileData
-      });
+      await updateStudentProfile(currentUser.uid, profileData);
       setEditing(false);
-      alert('Profile updated successfully!');
+      addNotification({
+        type: 'success',
+        title: 'Profile Updated',
+        message: 'Your profile has been updated successfully!'
+      });
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Failed to update profile');
+      addNotification({
+        type: 'error',
+        title: 'Update Failed',
+        message: 'Failed to update profile. Please try again.'
+      });
     } finally {
       setLoading(false);
     }
@@ -111,7 +117,6 @@ const Profile: React.FC = () => {
                   accept="image/*"
                   maxSize={5}
                   folder="profile-photos"
-                  className="max-w-sm mx-auto"
                 />
               </div>
             )}
@@ -249,7 +254,10 @@ const Profile: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Student Number
                   </label>
-                  <p className="text-gray-900">{profileData.studentNumber}</p>
+                  <div className="flex items-center">
+                    <User className="h-4 w-4 text-gray-400 mr-2" />
+                    <p className="text-gray-900">{profileData.studentNumber || 'Not assigned'}</p>
+                  </div>
                 </div>
 
                 <div>
@@ -285,6 +293,7 @@ const Profile: React.FC = () => {
                       <option value={2}>2nd Year</option>
                       <option value={3}>3rd Year</option>
                       <option value={4}>4th Year</option>
+                      <option value={5}>5th Year</option>
                     </select>
                   ) : (
                     <p className="text-gray-900">{profileData.year ? `${profileData.year}${profileData.year === 1 ? 'st' : profileData.year === 2 ? 'nd' : profileData.year === 3 ? 'rd' : 'th'} Year` : 'Not provided'}</p>
@@ -298,7 +307,10 @@ const Profile: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Staff Number
                 </label>
-                <p className="text-gray-900">{profileData.staffNumber}</p>
+                <div className="flex items-center">
+                  <User className="h-4 w-4 text-gray-400 mr-2" />
+                  <p className="text-gray-900">{profileData.staffNumber || 'Not assigned'}</p>
+                </div>
               </div>
             )}
           </div>
@@ -322,6 +334,24 @@ const Profile: React.FC = () => {
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
               Active
             </span>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Member Since
+            </label>
+            <p className="text-gray-900">
+              {currentUser?.profile?.createdAt 
+                ? new Date(currentUser.profile.createdAt).toLocaleDateString()
+                : 'N/A'}
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Last Updated
+            </label>
+            <p className="text-gray-900">
+              {new Date().toLocaleDateString()}
+            </p>
           </div>
         </div>
       </div>

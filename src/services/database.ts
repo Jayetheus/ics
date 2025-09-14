@@ -15,6 +15,109 @@ import {
 import { db } from './firebase';
 import { Student, Course, Result, Timetable, Payment, Ticket, Asset, Application, Subject, Registration } from '../types';
 
+// Enhanced student profile management
+export const updateStudentProfile = async (studentId: string, profileData: Partial<UserProfile>) => {
+  const userRef = doc(db, 'users', studentId);
+  const studentRef = doc(db, 'students', studentId);
+  
+  // Update both user and student documents
+  await Promise.all([
+    updateDoc(userRef, { profile: profileData }),
+    updateDoc(studentRef, { profile: profileData })
+  ]);
+};
+
+// Get student's enrolled subjects with results
+export const getStudentSubjectsWithResults = async (studentId: string) => {
+  const student = await getStudentById(studentId);
+  if (!student) return [];
+  
+  const courseCode = student.course;
+  const subjects = await getSubjectsByCourse(courseCode);
+  const results = await getResultsByStudent(studentId);
+  
+  return subjects.map(subject => ({
+    ...subject,
+    result: results.find(r => r.subjectCode === subject.code || r.courseCode === subject.code)
+  }));
+};
+
+// Get student's financial summary
+export const getStudentFinancialSummary = async (studentId: string) => {
+  const payments = await getPaymentsByStudent(studentId);
+  
+  const totalPaid = payments
+    .filter(p => p.status === 'approved')
+    .reduce((sum, p) => sum + p.amount, 0);
+    
+  const totalPending = payments
+    .filter(p => p.status === 'pending')
+    .reduce((sum, p) => sum + p.amount, 0);
+    
+  const totalFees = 45000; // This should come from course fee structure
+  const outstanding = totalFees - totalPaid;
+  
+  return {
+    totalFees,
+    totalPaid,
+    totalPending,
+    outstanding,
+    payments: payments.sort((a, b) => {
+      const dateA = a.date instanceof Timestamp ? a.date.toDate() : new Date(a.date as any);
+      const dateB = b.date instanceof Timestamp ? b.date.toDate() : new Date(b.date as any);
+      return dateB.getTime() - dateA.getTime();
+    })
+  };
+};
+
+// Get student's academic progress
+export const getStudentAcademicProgress = async (studentId: string) => {
+  const results = await getResultsByStudent(studentId);
+  const subjects = await getStudentSubjectsWithResults(studentId);
+  
+  const totalCredits = subjects.reduce((sum, s) => sum + s.credits, 0);
+  const completedCredits = subjects
+    .filter(s => s.result && s.result.mark >= 50)
+    .reduce((sum, s) => sum + s.credits, 0);
+    
+  const gpa = results.length > 0 
+    ? results.reduce((sum, r) => sum + r.mark, 0) / results.length 
+    : 0;
+    
+  const passRate = results.length > 0
+    ? (results.filter(r => r.mark >= 50).length / results.length) * 100
+    : 0;
+    
+  return {
+    totalCredits,
+    completedCredits,
+    gpa: Math.round(gpa * 100) / 100,
+    passRate: Math.round(passRate * 100) / 100,
+    totalSubjects: subjects.length,
+    completedSubjects: subjects.filter(s => s.result).length,
+    results
+  };
+};
+
+// Create student document from user registration
+export const createStudentFromUser = async (userId: string, userData: any) => {
+  const studentData = {
+    ...userData,
+    id: userId,
+    studentNumber: userData.profile.studentNumber,
+    firstName: userData.profile.firstName,
+    lastName: userData.profile.lastName,
+    email: userData.email,
+    course: userData.profile.course,
+    year: userData.profile.year,
+    status: 'active' as const,
+    registrationDate: new Date().toISOString()
+  };
+  
+  await setDoc(doc(db, 'students', userId), studentData);
+  return studentData;
+};
+
 // Students
 export const createStudent = async (studentData: any) => {
   
