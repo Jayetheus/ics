@@ -324,7 +324,6 @@ export const loadMockResults = async () => {
 
       const result = {
         studentId: student.id,
-        courseCode: (subject as any).code,
         courseName: (subject as any).name,
         courseCode: (subject as any).courseCode,
         mark,

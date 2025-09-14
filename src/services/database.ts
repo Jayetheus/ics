@@ -14,7 +14,7 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Student, Course, Result, Timetable, Payment, Ticket, Asset, Application, Subject } from '../types';
+import { Student, Course, Result, Timetable, Payment, Ticket, Asset, Application, Subject, Registration } from '../types';
 
 // Students
 export const createStudent = async (studentData: Omit<Student, 'id'>) => {
@@ -181,6 +181,12 @@ export const getApplicationsByStudent = async (studentId: string) => {
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
 };
+
+export const getStudentRegistration =  async (studentId: string) => {
+  const q = query(collection(db, 'registrations'), where('studentId', '==', studentId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Registration));
+}
 
 export const updateApplicationStatus = async (applicationId: string, status: Application['status']) => {
   const ref = doc(db, 'applications', applicationId);

@@ -47,6 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               role: userData.role,
               profile: userData.profile,
             });
+
           } else {
             console.error('User document not found in Firestore');
             setCurrentUser(null);
@@ -64,10 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
     });
 
-    return () => {
-      unsubscribe();
-      console.log("Unsubscribed from auth state changes")
-    };
+    return unsubscribe
   }, []);
 
 

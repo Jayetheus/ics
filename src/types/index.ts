@@ -62,6 +62,7 @@ export interface Result {
 }
 
 export interface Timetable {
+  courseName: string;
   id: string;
   subjectId: string;
   subjectName: string;
@@ -94,6 +95,15 @@ export interface Application {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   notes?: string;
+}
+
+export interface Registration {
+  id: string;
+  studentId: string;
+  courseCode: string;
+  createdAt: Timestamp;
+  startDate: string;
+  endDate: string;
 }
 
 export interface Subject {

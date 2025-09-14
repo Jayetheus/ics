@@ -19,8 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import { getResultsByStudent, getTimetable, getPaymentsByStudent, getApplicationsByStudent } from '../../services/database';
 import { Result, Timetable, Payment, Application } from '../../types';
-import { SkeletonDashboard, SkeletonCard } from '../common/Skeleton';
-import LoadingSpinner from '../common/LoadingSpinner';
+import { SkeletonDashboard } from '../common/Skeleton';
 
 const StudentDashboard: React.FC = () => {
   const { currentUser } = useAuth();

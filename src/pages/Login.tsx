@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
@@ -10,7 +10,7 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  const { login } = useAuth();
+  const { login, currentUser } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
 
@@ -26,6 +26,8 @@ const Login: React.FC = () => {
     { email: '', password: '' },
     { email: commonRules.email, password: commonRules.password }
   );
+
+  useEffect(()=>{ if (currentUser) navigate("/", { replace: true })}, [currentUser, navigate]);
 
   const onSubmit = async (formData: any) => {
     try {

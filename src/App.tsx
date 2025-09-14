@@ -44,7 +44,7 @@ const AppContent: React.FC = () => {
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
+
           {/* Protected routes */}
           <Route path="/" element={
             <ProtectedRoute>
@@ -54,7 +54,7 @@ const AppContent: React.FC = () => {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="helpdesk" element={<Helpdesk />} />
-            
+
             {/* Student routes */}
             <Route path="profile" element={
               <ProtectedRoute allowedRoles={['student']}>
@@ -96,7 +96,7 @@ const AppContent: React.FC = () => {
                 <Documents />
               </ProtectedRoute>
             } />
-            
+
             {/* Staff/Admin routes */}
             <Route path="students" element={
               <ProtectedRoute allowedRoles={['lecturer']}>
@@ -158,7 +158,7 @@ const AppContent: React.FC = () => {
                 <Settings />
               </ProtectedRoute>
             } />
-            
+
             {/* Finance routes */}
             <Route path="payment-management" element={
               <ProtectedRoute allowedRoles={['finance']}>
@@ -181,7 +181,7 @@ const AppContent: React.FC = () => {
               </ProtectedRoute>
             } />
           </Route>
-          
+
           {/* Unauthorized page */}
           <Route path="/unauthorized" element={
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -191,7 +191,7 @@ const AppContent: React.FC = () => {
               </div>
             </div>
           } />
-          
+
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
@@ -205,13 +205,15 @@ const AppContent: React.FC = () => {
 };
 
 function App() {
+  console.log("App component rendered");
+
   return (
     <ErrorBoundary>
-      <NotificationProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <NotificationProvider>
           <AppContent />
-        </AuthProvider>
-      </NotificationProvider>
+        </NotificationProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }
