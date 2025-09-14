@@ -9,20 +9,22 @@ import {
   query, 
   where, 
   orderBy, 
-  limit,
-  onSnapshot,
-  Timestamp 
+  Timestamp, 
+  setDoc
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Student, Course, Result, Timetable, Payment, Ticket, Asset, Application, Subject, Registration } from '../types';
 
 // Students
-export const createStudent = async (studentData: Omit<Student, 'id'>) => {
-  const docRef = await addDoc(collection(db, 'students'), {
-    ...studentData,
+export const createStudent = async (studentData: any) => {
+  
+  const data = {...studentData, displayName: `${studentData.profile.firstName} ${studentData.profile.lastName}`}
+  console.log(data)
+  await setDoc(doc(db, 'students', data.uid), {
+    ...data,
     registrationDate: Timestamp.now(),
   });
-  return docRef.id;
+  return true;
 };
 
 export const getStudents = async () => {
@@ -208,7 +210,7 @@ export const getSubjectsByCourse = async (courseCode: string) => {
 // Simple enrolled subjects storage per student
 export const enrollStudentSubjects = async (studentId: string, subjectCodes: string[]) => {
   const ref = doc(db, 'students', studentId);
-  await updateDoc(ref, { enrolledSubjects: subjectCodes });
+  await setDoc(ref, { enrolledSubjects: subjectCodes });
 };
 
 // Populate subjects for a course

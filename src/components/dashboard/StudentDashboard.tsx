@@ -111,7 +111,7 @@ const StudentDashboard: React.FC = () => {
   }
 
   // Show application prompt if needed
-  if (needsApplication && applications.length === 0) {
+  if (needsApplication) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white text-center">
@@ -130,7 +130,7 @@ const StudentDashboard: React.FC = () => {
             onClick={() => navigate('/applications')}
             className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Start Application
+            {applications.length > 0? "Register Course" : "Apply Now" }
             <ArrowRight className="h-4 w-4 ml-2" />
           </button>
         </div>

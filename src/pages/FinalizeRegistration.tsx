@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle, BookOpen, CreditCard, User, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import { getApplicationsByStudent, getSubjectsByCourse, enrollStudentSubjects, updateStudent } from '../services/database';
+import { getApplicationsByStudent, getSubjectsByCourse, enrollStudentSubjects, updateStudent, getStudentById, createStudent } from '../services/database';
 import { Subject, Application } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
@@ -67,10 +67,14 @@ const FinalizeRegistration: React.FC = () => {
     try {
       setFinalizing(true);
       await enrollStudentSubjects(currentUser.uid, chosen);
-      await updateStudent(currentUser.uid, { 
-        status: 'active' as any,
-        year: year,
-        course: approvedApp.courseCode
+      await createStudent({
+        ...currentUser,
+        profile: {
+          ...currentUser.profile,
+          status: 'active' as any,
+          year: year,
+          course: approvedApp.courseCode
+        }   
       });
       
       addNotification({
@@ -90,6 +94,7 @@ const FinalizeRegistration: React.FC = () => {
         title: 'Registration Failed',
         message: 'Failed to finalize registration. Please try again.',
       });
+      console.error('Finalize Registration Error:', error);
     } finally {
       setFinalizing(false);
     }
