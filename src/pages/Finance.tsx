@@ -1,18 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Download, AlertTriangle, CheckCircle, Clock, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getPaymentsByStudent, createPayment, getStudentFinancialSummary } from '../services/database';
+import { getPaymentsByStudent, createPayment } from '../services/database';
 import { PAYMENT_TYPES } from '../data/constants';
 import { Payment } from '../types';
 import FileUpload from '../components/common/FileUpload';
-import { useNotification } from '../context/NotificationContext';
 import { serverTimestamp, Timestamp } from 'firebase/firestore';
 
 const Finance: React.FC = () => {
   const { currentUser } = useAuth();
-  const { addNotification } = useNotification();
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [financialSummary, setFinancialSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [newPayment, setNewPayment] = useState({
@@ -27,19 +24,10 @@ const Finance: React.FC = () => {
       if (!currentUser) return;
       
       try {
-        const [paymentsData, financialData] = await Promise.all([
-          getPaymentsByStudent(currentUser.uid),
-          getStudentFinancialSummary(currentUser.uid)
-        ]);
+        const paymentsData = await getPaymentsByStudent(currentUser.uid);
         setPayments(paymentsData);
-        setFinancialSummary(financialData);
       } catch (error) {
         console.error('Error fetching payments:', error);
-        addNotification({
-          type: 'error',
-          title: 'Loading Error',
-          message: 'Failed to load payment data. Please try again.'
-        });
       } finally {
         setLoading(false);
       }
@@ -71,12 +59,8 @@ const Finance: React.FC = () => {
       
       // Refresh payments list
       if (currentUser?.uid) {
-        const [updatedPayments, updatedFinancial] = await Promise.all([
-          getPaymentsByStudent(currentUser.uid),
-          getStudentFinancialSummary(currentUser.uid)
-        ]);
+        const updatedPayments = await getPaymentsByStudent(currentUser.uid);
         setPayments(updatedPayments);
-        setFinancialSummary(updatedFinancial);
       }
       
       setNewPayment({
@@ -86,18 +70,10 @@ const Finance: React.FC = () => {
         proofOfPaymentUrl: '',
       });
       setShowPaymentForm(false);
-      addNotification({
-        type: 'success',
-        title: 'Payment Submitted',
-        message: 'Your payment has been submitted successfully and will be reviewed by the finance team.'
-      });
+      alert('Payment submitted successfully! It will be reviewed by the finance team.');
     } catch (error) {
       console.error('Error creating payment:', error);
-      addNotification({
-        type: 'error',
-        title: 'Submission Failed',
-        message: 'Failed to submit payment. Please try again.'
-      });
+      alert('Failed to submit payment. Please try again.');
     }
   };
 
@@ -139,9 +115,8 @@ const Finance: React.FC = () => {
     .filter(p => p.status === 'pending')
     .reduce((sum, p) => sum + p.amount, 0);
 
-  // Use financial summary data if available
-  const totalFees = financialSummary?.totalFees || 45000;
-  const outstanding = financialSummary?.outstanding || (totalFees - totalPaid);
+  const totalFees = 45000; // Sample total fees
+  const outstanding = totalFees - totalPaid;
 
   if (loading) {
     return (
@@ -179,9 +154,7 @@ const Finance: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Total Fees</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                R{(financialSummary?.totalFees || totalFees).toLocaleString()}
-              </p>
+              <p className="text-2xl font-semibold text-gray-900">R{totalFees.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -193,9 +166,7 @@ const Finance: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Paid Amount</p>
-              <p className="text-2xl font-semibold text-green-600">
-                R{(financialSummary?.totalPaid || totalPaid).toLocaleString()}
-              </p>
+              <p className="text-2xl font-semibold text-green-600">R{totalPaid.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -207,9 +178,7 @@ const Finance: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Pending</p>
-              <p className="text-2xl font-semibold text-yellow-600">
-                R{(financialSummary?.totalPending || totalPending).toLocaleString()}
-              </p>
+              <p className="text-2xl font-semibold text-yellow-600">R{totalPending.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -222,7 +191,7 @@ const Finance: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm text-gray-600">Outstanding</p>
               <p className={`text-2xl font-semibold ${outstanding > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                R{(financialSummary?.outstanding || outstanding).toLocaleString()}
+                R{outstanding.toLocaleString()}
               </p>
             </div>
           </div>
@@ -234,24 +203,17 @@ const Finance: React.FC = () => {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Payment Progress</h2>
         <div className="mb-4">
           <div className="flex justify-between text-sm text-gray-600 mb-2">
-            <span>Paid: R{(financialSummary?.totalPaid || totalPaid).toLocaleString()}</span>
-            <span>Total: R{(financialSummary?.totalFees || totalFees).toLocaleString()}</span>
+            <span>Paid: R{totalPaid.toLocaleString()}</span>
+            <span>Total: R{totalFees.toLocaleString()}</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3">
             <div 
               className="bg-green-600 h-3 rounded-full transition-all duration-300"
-              style={{ 
-                width: `${Math.min(
-                  ((financialSummary?.totalPaid || totalPaid) / (financialSummary?.totalFees || totalFees)) * 100, 
-                  100
-                )}%` 
-              }}
+              style={{ width: `${Math.min((totalPaid / totalFees) * 100, 100)}%` }}
             ></div>
           </div>
           <p className="text-sm text-gray-600 mt-2 text-center">
-            {Math.round(
-              ((financialSummary?.totalPaid || totalPaid) / (financialSummary?.totalFees || totalFees)) * 100
-            )}% completed
+            {Math.round((totalPaid / totalFees) * 100)}% completed
           </p>
         </div>
       </div>
@@ -341,32 +303,6 @@ const Finance: React.FC = () => {
           </form>
         </div>
       )}
-
-      {/* Payment Instructions */}
-      <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
-        <h2 className="text-lg font-semibold text-blue-900 mb-4">Payment Instructions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="font-medium text-blue-900 mb-2">Bank Transfer Details</h3>
-            <div className="text-sm text-blue-800 space-y-1">
-              <p><strong>Bank:</strong> First National Bank</p>
-              <p><strong>Account Name:</strong> Integrated College System</p>
-              <p><strong>Account Number:</strong> 1234567890</p>
-              <p><strong>Branch Code:</strong> 250655</p>
-              <p><strong>Reference:</strong> Your Student Number</p>
-            </div>
-          </div>
-          <div>
-            <h3 className="font-medium text-blue-900 mb-2">Important Notes</h3>
-            <div className="text-sm text-blue-800 space-y-1">
-              <p>• Always use your student number as reference</p>
-              <p>• Upload proof of payment after making transfer</p>
-              <p>• Payments are processed within 2-3 business days</p>
-              <p>• Contact finance for payment queries</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Payment History */}
       <div className="bg-white rounded-lg shadow-sm border">

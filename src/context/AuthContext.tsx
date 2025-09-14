@@ -9,7 +9,6 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import { User, UserRole } from '../types';
-import { createStudentFromUser } from '../services/database';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -85,11 +84,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     await setDoc(doc(db, 'users', user.uid), userData);
-    
-    // If registering a student, also create student document
-    if (role === 'student') {
-      await createStudentFromUser(user.uid, { ...userData, uid: user.uid });
-    }
   };
 
   const logout = async () => {

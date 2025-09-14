@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, TrendingUp, Award, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getResultsByStudent, getStudentAcademicProgress } from '../services/database';
+import { getResultsByStudent } from '../services/database';
 import { Result } from '../types';
-import { useNotification } from '../context/NotificationContext';
 
 const Results: React.FC = () => {
   const { currentUser } = useAuth();
-  const { addNotification } = useNotification();
   const [results, setResults] = useState<Result[]>([]);
-  const [academicProgress, setAcademicProgress] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedSemester, setSelectedSemester] = useState('all');
   const [selectedYear, setSelectedYear] = useState('all');
@@ -19,19 +16,10 @@ const Results: React.FC = () => {
       if (!currentUser) return;
       
       try {
-        const [resultsData, progressData] = await Promise.all([
-          getResultsByStudent(currentUser.uid),
-          getStudentAcademicProgress(currentUser.uid)
-        ]);
+        const resultsData = await getResultsByStudent(currentUser.uid);
         setResults(resultsData);
-        setAcademicProgress(progressData);
       } catch (error) {
         console.error('Error fetching results:', error);
-        addNotification({
-          type: 'error',
-          title: 'Loading Error',
-          message: 'Failed to load results. Please try again.'
-        });
       } finally {
         setLoading(false);
       }
@@ -63,7 +51,7 @@ const Results: React.FC = () => {
   const calculateGPA = (results: Result[]) => {
     if (results.length === 0) return 0;
     const total = results.reduce((sum, result) => sum + result.mark, 0);
-    return Math.round((total / results.length) * 100) / 100;
+    return (total / results.length).toFixed(2);
   };
 
   const filteredResults = results.filter(result => {
@@ -108,9 +96,7 @@ const Results: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Total Courses</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {academicProgress?.totalSubjects || results.length}
-              </p>
+              <p className="text-2xl font-semibold text-gray-900">{results.length}</p>
             </div>
           </div>
         </div>
@@ -122,9 +108,7 @@ const Results: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Average Grade</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {academicProgress?.gpa || calculateGPA(results)}%
-              </p>
+              <p className="text-2xl font-semibold text-gray-900">{calculateGPA(results)}%</p>
             </div>
           </div>
         </div>
@@ -137,7 +121,7 @@ const Results: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm text-gray-600">Highest Grade</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {results.length > 0 ? Math.max(...results.map(r => r.mark)) : 0}%
+                {Math.max(...results.map(r => r.mark))}%
               </p>
             </div>
           </div>
@@ -150,38 +134,11 @@ const Results: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Current Year</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {currentUser?.profile?.year || new Date().getFullYear()}
-              </p>
+              <p className="text-2xl font-semibold text-gray-900">2024</p>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Academic Progress Summary */}
-      {academicProgress && (
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Academic Performance Summary</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{academicProgress.completedSubjects}</div>
-              <div className="text-sm text-blue-800">Subjects Completed</div>
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{academicProgress.passRate}%</div>
-              <div className="text-sm text-green-800">Pass Rate</div>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">{academicProgress.completedCredits}</div>
-              <div className="text-sm text-purple-800">Credits Earned</div>
-            </div>
-            <div className="text-center p-4 bg-orange-50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">{academicProgress.totalCredits}</div>
-              <div className="text-sm text-orange-800">Total Credits</div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -255,14 +212,9 @@ const Results: React.FC = () => {
                 <tr key={result.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{result.courseName}</div>
-                    {result.subjectName && result.subjectName !== result.courseName && (
-                      <div className="text-xs text-gray-500">{result.subjectName}</div>
-                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {result.subjectCode || result.courseCode}
-                    </div>
+                    <div className="text-sm text-gray-900">{result.courseCode}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{result.semester}</div>
@@ -272,9 +224,6 @@ const Results: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-semibold text-gray-900">{result.mark}%</div>
-                    <div className="text-xs text-gray-500">
-                      {result.mark >= 50 ? 'Pass' : 'Fail'}
-                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getGradeColor(result.grade)}`}>

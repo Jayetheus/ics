@@ -17,15 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { 
-  getResultsByStudent, 
-  getTimetable, 
-  getPaymentsByStudent, 
-  getApplicationsByStudent,
-  getStudentFinancialSummary,
-  getStudentAcademicProgress,
-  getStudentSubjectsWithResults
-} from '../../services/database';
+import { getResultsByStudent, getTimetable, getPaymentsByStudent, getApplicationsByStudent } from '../../services/database';
 import { Result, Timetable, Payment, Application } from '../../types';
 import { SkeletonDashboard } from '../common/Skeleton';
 
@@ -37,8 +29,6 @@ const StudentDashboard: React.FC = () => {
   const [timetable, setTimetable] = useState<Timetable[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
-  const [financialSummary, setFinancialSummary] = useState<any>(null);
-  const [academicProgress, setAcademicProgress] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -48,28 +38,17 @@ const StudentDashboard: React.FC = () => {
       
       try {
         setError(null);
-        const [
-          resultsData, 
-          timetableData, 
-          paymentsData, 
-          applicationsData,
-          financialData,
-          academicData
-        ] = await Promise.all([
+        const [resultsData, timetableData, paymentsData, applicationsData] = await Promise.all([
           getResultsByStudent(currentUser.uid),
           getTimetable(),
           getPaymentsByStudent(currentUser.uid),
-          getApplicationsByStudent(currentUser.uid),
-          getStudentFinancialSummary(currentUser.uid),
-          getStudentAcademicProgress(currentUser.uid)
+          getApplicationsByStudent(currentUser.uid)
         ]);
         
         setResults(resultsData);
         setTimetable(timetableData);
         setPayments(paymentsData);
         setApplications(applicationsData);
-        setFinancialSummary(financialData);
-        setAcademicProgress(academicData);
       } catch (error: any) {
         console.error('Error fetching dashboard data:', error);
         setError(error.message || 'Failed to load dashboard data');
@@ -97,6 +76,17 @@ const StudentDashboard: React.FC = () => {
   const hasApprovedApplication = applications.some(app => app.status === 'approved');
   const hasActiveRegistration = currentUser?.profile?.course && currentUser?.profile?.year;
   const needsApplication = !hasApprovedApplication && !hasActiveRegistration;
+
+  // Calculate finance status
+  const totalPaid = payments.filter(p => p.status === 'approved').reduce((sum, p) => sum + p.amount, 0);
+  const totalFees = 45000; // This could be fetched from a fees structure
+  const outstandingAmount = totalFees - totalPaid;
+  const financeStatus = {
+    totalFees,
+    paidAmount: totalPaid,
+    outstandingAmount,
+    status: outstandingAmount > 0 ? 'partial' : 'paid'
+  };
 
   if (loading) {
     return <SkeletonDashboard />;
@@ -203,9 +193,7 @@ const StudentDashboard: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Current Subjects</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {academicProgress?.totalSubjects || 0}
-              </p>
+              <p className="text-2xl font-semibold text-gray-900">{results.length}</p>
             </div>
           </div>
         </div>
@@ -218,7 +206,7 @@ const StudentDashboard: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm text-gray-600">Average Grade</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {academicProgress?.gpa || 0}%
+                {results.length > 0 ? Math.round(results.reduce((sum, r) => sum + r.mark, 0) / results.length) : 0}%
               </p>
             </div>
           </div>
@@ -241,18 +229,18 @@ const StudentDashboard: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center">
             <div className={`p-2 rounded-lg ${
-              financialSummary?.outstanding === 0 ? 'bg-green-100' : 
-              financialSummary?.outstanding > 0 ? 'bg-yellow-100' : 'bg-red-100'
+              financeStatus.status === 'paid' ? 'bg-green-100' : 
+              financeStatus.status === 'partial' ? 'bg-yellow-100' : 'bg-red-100'
             }`}>
               <CreditCard className={`h-6 w-6 ${
-                financialSummary?.outstanding === 0 ? 'text-green-600' : 
-                financialSummary?.outstanding > 0 ? 'text-yellow-600' : 'text-red-600'
+                financeStatus.status === 'paid' ? 'text-green-600' : 
+                financeStatus.status === 'partial' ? 'text-yellow-600' : 'text-red-600'
               }`} />
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Finance Status</p>
               <p className="text-sm font-semibold capitalize text-gray-900">
-                R{financialSummary?.outstanding?.toLocaleString() || 0} Outstanding
+                R{financeStatus.outstandingAmount.toLocaleString()} Outstanding
               </p>
             </div>
           </div>
@@ -351,19 +339,19 @@ const StudentDashboard: React.FC = () => {
             <div className="text-center">
               <p className="text-sm text-gray-600">Total Fees</p>
               <p className="text-2xl font-bold text-gray-900">
-                R{financialSummary?.totalFees?.toLocaleString() || 0}
+                R{financeStatus.totalFees.toLocaleString()}
               </p>
             </div>
             <div className="text-center">
               <p className="text-sm text-gray-600">Paid Amount</p>
               <p className="text-2xl font-bold text-green-600">
-                R{financialSummary?.totalPaid?.toLocaleString() || 0}
+                R{financeStatus.paidAmount.toLocaleString()}
               </p>
             </div>
             <div className="text-center">
               <p className="text-sm text-gray-600">Outstanding</p>
               <p className="text-2xl font-bold text-red-600">
-                R{financialSummary?.outstanding?.toLocaleString() || 0}
+                R{financeStatus.outstandingAmount.toLocaleString()}
               </p>
             </div>
           </div>
@@ -372,65 +360,15 @@ const StudentDashboard: React.FC = () => {
             <div className="bg-gray-200 rounded-full h-3">
               <div 
                 className="bg-green-600 h-3 rounded-full"
-                style={{ 
-                  width: `${financialSummary?.totalFees > 0 
-                    ? (financialSummary.totalPaid / financialSummary.totalFees) * 100 
-                    : 0}%` 
-                }}
+                style={{ width: `${(financeStatus.paidAmount / financeStatus.totalFees) * 100}%` }}
               ></div>
             </div>
             <p className="text-sm text-gray-600 mt-2 text-center">
-              {financialSummary?.totalFees > 0 
-                ? Math.round((financialSummary.totalPaid / financialSummary.totalFees) * 100)
-                : 0}% paid
+              {Math.round((financeStatus.paidAmount / financeStatus.totalFees) * 100)}% paid
             </p>
           </div>
         </div>
       </div>
-
-      {/* Academic Progress */}
-      {academicProgress && (
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-              <BookOpen className="h-5 w-5 mr-2 text-green-600" />
-              Academic Progress
-            </h2>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{academicProgress.totalSubjects}</div>
-                <div className="text-sm text-gray-600">Total Subjects</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{academicProgress.completedSubjects}</div>
-                <div className="text-sm text-gray-600">Completed</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{academicProgress.gpa}%</div>
-                <div className="text-sm text-gray-600">GPA</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">{academicProgress.passRate}%</div>
-                <div className="text-sm text-gray-600">Pass Rate</div>
-              </div>
-            </div>
-            
-            <div className="mt-6">
-              <div className="bg-gray-200 rounded-full h-3">
-                <div 
-                  className="bg-blue-600 h-3 rounded-full"
-                  style={{ width: `${(academicProgress.completedCredits / academicProgress.totalCredits) * 100}%` }}
-                ></div>
-              </div>
-              <p className="text-sm text-gray-600 mt-2 text-center">
-                {academicProgress.completedCredits} of {academicProgress.totalCredits} credits completed
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Quick Actions */}
       <div className="bg-white rounded-lg shadow-sm border">
