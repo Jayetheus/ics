@@ -17,8 +17,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { getResultsByStudent, getTimetable, getPaymentsByStudent, getApplicationsByStudent } from '../../services/database';
-import { Result, Timetable, Payment, Application } from '../../types';
+import { getResultsByStudent, getTimetable, getPaymentsByStudent, getApplicationsByStudent, getStudentRegistration, getSubjectsByCourse } from '../../services/database';
+import { Result, Timetable, Payment, Application, Registration } from '../../types';
 import { SkeletonDashboard } from '../common/Skeleton';
 
 const StudentDashboard: React.FC = () => {
@@ -29,6 +29,8 @@ const StudentDashboard: React.FC = () => {
   const [timetable, setTimetable] = useState<Timetable[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [registration, setRegistration] = useState<any>();
+  const [subjectsNumber, setSubjectsNumber] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -38,17 +40,21 @@ const StudentDashboard: React.FC = () => {
       
       try {
         setError(null);
-        const [resultsData, timetableData, paymentsData, applicationsData] = await Promise.all([
+        const [resultsData, timetableData, paymentsData, applicationsData, regs, subjectsNumber] = await Promise.all([
           getResultsByStudent(currentUser.uid),
           getTimetable(),
           getPaymentsByStudent(currentUser.uid),
-          getApplicationsByStudent(currentUser.uid)
+          getApplicationsByStudent(currentUser.uid),
+          getStudentRegistration(currentUser.uid),
+          getSubjectsByCourse(await getStudentRegistration(currentUser.uid).then(r => r?.courseCode || ''))
         ]);
         
         setResults(resultsData);
         setTimetable(timetableData);
         setPayments(paymentsData);
         setApplications(applicationsData);
+        setRegistration(regs);
+        setSubjectsNumber(subjectsNumber.length);
       } catch (error: any) {
         console.error('Error fetching dashboard data:', error);
         setError(error.message || 'Failed to load dashboard data');
@@ -74,7 +80,7 @@ const StudentDashboard: React.FC = () => {
 
   // Check registration status
   const hasApprovedApplication = applications.some(app => app.status === 'approved');
-  const hasActiveRegistration = currentUser?.profile?.course && currentUser?.profile?.year;
+  const hasActiveRegistration = registration && registration.year;
   const needsApplication = !hasApprovedApplication && !hasActiveRegistration;
 
   // Calculate finance status
@@ -156,7 +162,7 @@ const StudentDashboard: React.FC = () => {
           Welcome back, {currentUser?.profile?.firstName || 'Student'}!
         </h1>
         <p className="mt-2 opacity-90">
-          {currentUser?.profile?.course} - Year {currentUser?.profile?.year}
+          {registration?.courseCode} - Year {registration?.year}
         </p>
         <p className="text-sm opacity-75">
           Student Number: {currentUser?.profile?.studentNumber}
@@ -193,7 +199,7 @@ const StudentDashboard: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Current Subjects</p>
-              <p className="text-2xl font-semibold text-gray-900">{results.length}</p>
+              <p className="text-2xl font-semibold text-gray-900">{subjectsNumber}</p>
             </div>
           </div>
         </div>
