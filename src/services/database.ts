@@ -88,7 +88,7 @@ export const getTimetable = async () => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Timetable));
 };
 
-// Payments
+// @section: Payments
 export const createPayment = async (paymentData: Omit<Payment, 'id'>) => {
   const docRef = await addDoc(collection(db, 'payments'), {
     ...paymentData,
@@ -96,6 +96,7 @@ export const createPayment = async (paymentData: Omit<Payment, 'id'>) => {
   });
   return docRef.id;
 };
+
 
 export const getPaymentsByStudent = async (studentId: string) => {
   const q = query(collection(db, 'payments'), where('studentId', '==', studentId));
@@ -112,8 +113,10 @@ export const updatePaymentStatus = async (id: string, status: Payment['status'])
   const docRef = doc(db, 'payments', id);
   await updateDoc(docRef, { status });
 };
+// @endsection
 
-// Tickets
+
+// @section: Tickets
 export const createTicket = async (ticketData: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt'>) => {
   const docRef = await addDoc(collection(db, 'tickets'), {
     ...ticketData,
@@ -146,8 +149,10 @@ export const updateTicket = async (id: string, data: Partial<Ticket>) => {
     updatedAt: Timestamp.now(),
   });
 };
+// @endsection
 
-// Assets
+
+// @section: Assets
 export const createAsset = async (assetData: Omit<Asset, 'id' | 'uploadedAt'>) => {
   const docRef = await addDoc(collection(db, 'assets'), {
     ...assetData,
@@ -167,7 +172,9 @@ export const deleteAsset = async (id: string) => {
   await deleteDoc(docRef);
 };
 
-// Applications
+// @endsection
+
+// @section: Applications
 export const createApplication = async (applicationData: Omit<Application, 'id' | 'createdAt' | 'updatedAt'>) => {
   const docRef = await addDoc(collection(db, 'applications'), {
     ...applicationData,
@@ -184,16 +191,20 @@ export const getApplicationsByStudent = async (studentId: string) => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
 };
 
-export const getStudentRegistration =  async (studentId: string) => {
-  const q = query(collection(db, 'registrations'), where('studentId', '==', studentId));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Registration));
-}
 
 export const updateApplicationStatus = async (applicationId: string, status: Application['status']) => {
   const ref = doc(db, 'applications', applicationId);
   await updateDoc(ref, { status, updatedAt: Timestamp.now() });
 };
+// @endsection
+
+//Registrations
+export const getStudentRegistration =  async (studentId: string) => {
+  const q = query(collection(db, 'students'), where('uid', '==', studentId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id,courseCode: doc.data().profile.course, year: doc.data().profile.year} as any))[0];
+}
+
 
 // Subjects
 export const createSubject = async (subjectData: Omit<Subject, 'id'>) => {
