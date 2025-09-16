@@ -27,6 +27,7 @@ import AssetManagement from './pages/AssetManagement';
 import Reports from './pages/Reports';
 import HelpdeskManagement from './pages/HelpdeskManagement';
 import Settings from './pages/Settings';
+import SubjectManagement from './pages/SubjectManagement';
 import StudentFinance from './pages/StudentFinance';
 import FinancialReports from './pages/FinancialReports';
 import PaymentProofs from './pages/PaymentProofs';
@@ -123,9 +124,24 @@ const AppContent: React.FC = () => {
                 <StudentManagement />
               </ProtectedRoute>
             } />
+            <Route path="college-management" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <CollegeManagement />
+              </ProtectedRoute>
+            } />
             <Route path="course-management" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <CourseManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="subject-management" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <SubjectManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="applications-management" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ApplicationsManagement />
               </ProtectedRoute>
             } />
             <Route path="timetable-management" element={

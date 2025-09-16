@@ -45,7 +45,22 @@ export interface Course {
   credits: number;
   lecturer: string;
   department: string;
+  collegeId: string;
   subjects?: Subject[];
+}
+
+export interface College {
+  id: string;
+  name: string;
+  code: string;
+  location: string;
+  established: string;
+  type: 'university' | 'college' | 'institute';
+  accreditation: string;
+  website?: string;
+  phone?: string;
+  email?: string;
+  createdAt: string;
 }
 
 export interface Result {

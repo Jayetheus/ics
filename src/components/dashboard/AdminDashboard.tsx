@@ -210,19 +210,24 @@ const AdminDashboard: React.FC = () => {
               <span className="text-sm font-medium text-blue-900">Manage Students</span>
             </button>
             
-            <button className="flex flex-col items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
-              <BookOpen className="h-8 w-8 text-green-600 mb-2" />
-              <span className="text-sm font-medium text-green-900">Subject Management</span>
+            <button className="flex flex-col items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+              <BookOpen className="h-8 w-8 text-purple-600 mb-2" />
+              <span className="text-sm font-medium text-purple-900">College Management</span>
             </button>
             
-            <button className="flex flex-col items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
-              <Calendar className="h-8 w-8 text-purple-600 mb-2" />
-              <span className="text-sm font-medium text-purple-900">Timetable</span>
+            <button className="flex flex-col items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+              <BookOpen className="h-8 w-8 text-green-600 mb-2" />
+              <span className="text-sm font-medium text-green-900">Course Management</span>
+            </button>
+            
+            <button className="flex flex-col items-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
+              <FileText className="h-8 w-8 text-indigo-600 mb-2" />
+              <span className="text-sm font-medium text-indigo-900">Applications</span>
             </button>
             
             <button className="flex flex-col items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors">
-              <FileText className="h-8 w-8 text-orange-600 mb-2" />
-              <span className="text-sm font-medium text-orange-900">Reports</span>
+              <Calendar className="h-8 w-8 text-orange-600 mb-2" />
+              <span className="text-sm font-medium text-orange-900">Timetable</span>
             </button>
           </div>
         </div>

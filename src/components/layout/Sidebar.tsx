@@ -59,12 +59,15 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
         return [
           ...baseItems,
           { icon: Users, label: 'Student Management', path: '/student-management' },
+          { icon: BookOpen, label: 'College Management', path: '/college-management' },
           { icon: BookOpen, label: 'Course Management', path: '/course-management' },
+          { icon: BookOpen, label: 'Subject Management', path: '/subject-management' },
+          { icon: FileText, label: 'Applications Management', path: '/applications-management' },
           { icon: Calendar, label: 'Timetable Management', path: '/timetable-management' },
           { icon: Upload, label: 'Asset Management', path: '/asset-management' },
           { icon: BarChart3, label: 'Reports', path: '/reports' },
           { icon: HelpCircle, label: 'Helpdesk Management', path: '/helpdesk-management' },
-          { icon: Settings, label: 'Settings', path: '/settings' },
+          { icon: Settings, label: 'Settings', path: '/settings' }
         ];
       
       case 'finance':

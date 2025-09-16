@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Student, Course, Result, Timetable, Payment, Ticket, Asset, Application, Subject } from '../types';
+import type { College } from '../types';
 
 // @section: Students
 export const createStudent = async (studentData: any) => {
@@ -246,6 +247,31 @@ export const deleteCourse = async (id: string) => {
   const docRef = doc(db, 'courses', id);
   await deleteDoc(docRef);
 };
+
+// @section: Colleges
+export const createCollege = async (collegeData: Omit<College, 'id' | 'createdAt'>) => {
+  const docRef = await addDoc(collection(db, 'colleges'), {
+    ...collegeData,
+    createdAt: Timestamp.now(),
+  });
+  return docRef.id;
+};
+
+export const getColleges = async () => {
+  const querySnapshot = await getDocs(collection(db, 'colleges'));
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as College));
+};
+
+export const updateCollege = async (id: string, data: Partial<College>) => {
+  const docRef = doc(db, 'colleges', id);
+  await updateDoc(docRef, data);
+};
+
+export const deleteCollege = async (id: string) => {
+  const docRef = doc(db, 'colleges', id);
+  await deleteDoc(docRef);
+};
+// @endsection
 
 export const createSubject = async (subjectData: Omit<Subject, 'id'>) => {
   const docRef = await addDoc(collection(db, 'subjects'), subjectData);
