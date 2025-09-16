@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle, BookOpen, CreditCard, User, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import { getApplicationsByStudent, getSubjectsByCourse, enrollStudentSubjects, updateStudent, getStudentById, createStudent } from '../services/database';
+import { getApplicationsByStudent, getSubjectsByCourse, enrollStudentSubjects, createStudent, updateFinancesByStudentId } from '../services/database';
 import { Subject, Application } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
@@ -15,6 +15,7 @@ const FinalizeRegistration: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [year, setYear] = useState<number>(1);
+  const [finances, setFinances] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState(false);
   const [step, setStep] = useState(1);
@@ -34,6 +35,8 @@ const FinalizeRegistration: React.FC = () => {
             subs.map(s => [s.code, s.credits >= 6]) // Auto-select major subjects
           );
           setSelected(defaultSelected);
+          const selectedFinances = subs.filter(sub => defaultSelected[sub.code]).map(value=> ({detail: value.code, amount: value.amount}));
+          setFinances(selectedFinances);
         }
       } catch (error) {
         addNotification({
@@ -48,13 +51,18 @@ const FinalizeRegistration: React.FC = () => {
     load();
   }, [currentUser, addNotification]);
 
-  const toggle = (code: string) => setSelected(prev => ({ ...prev, [code]: !prev[code] }));
+  const toggle = (code: string) => {
+    const updatedSelected = ({ ...selected, [code]: !selected[code] });
+    setSelected(prev => ({ ...prev, [code]: !prev[code] }));
+    const selectedFinances = subjects.filter(sub => updatedSelected[sub.code]).map(value=> ({detail: value.code, amount: value.amount}));
+    setFinances(selectedFinances)
+  }
 
   const finalize = async () => {
     if (!currentUser || !approvedApp) return;
-    
+
     const chosen = Object.entries(selected).filter(([_, v]) => v).map(([k]) => k);
-    
+
     if (chosen.length === 0) {
       addNotification({
         type: 'warning',
@@ -63,6 +71,8 @@ const FinalizeRegistration: React.FC = () => {
       });
       return;
     }
+
+    const updatedFinances = [...finances, {detail: `${new Date().getFullYear()} registration fee`, amount: 1500}]
 
     try {
       setFinalizing(true);
@@ -74,20 +84,21 @@ const FinalizeRegistration: React.FC = () => {
           status: 'active' as any,
           year: year,
           course: approvedApp.courseCode
-        }   
+        }
       });
-      
+      await updateFinancesByStudentId(currentUser.uid, updatedFinances);
+
       addNotification({
         type: 'success',
         title: 'Registration Complete!',
         message: 'Your registration has been finalized successfully.',
       });
-      
+
       // Navigate to finance page for payment
       setTimeout(() => {
         navigate('/finance');
       }, 2000);
-      
+
     } catch (error) {
       addNotification({
         type: 'error',
@@ -105,6 +116,7 @@ const FinalizeRegistration: React.FC = () => {
     const subject = subjects.find(s => s.code === code);
     return sum + (subject?.credits || 0);
   }, 0);
+
 
   if (loading) {
     return (
@@ -184,11 +196,10 @@ const FinalizeRegistration: React.FC = () => {
               <button
                 key={yearOption}
                 onClick={() => setYear(yearOption)}
-                className={`p-4 border-2 rounded-lg text-center transition-colors ${
-                  year === yearOption 
-                    ? 'border-blue-600 bg-blue-50 text-blue-900' 
+                className={`p-4 border-2 rounded-lg text-center transition-colors ${year === yearOption
+                    ? 'border-blue-600 bg-blue-50 text-blue-900'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 <div className="text-2xl font-bold">{yearOption}</div>
                 <div className="text-sm">
@@ -220,32 +231,35 @@ const FinalizeRegistration: React.FC = () => {
             <div className="text-sm text-gray-600">
               Total Credits: <span className="font-semibold">{totalCredits}</span>
             </div>
+            <div className="text-sm text-gray-600">
+              Total Price: R<span className="font-semibold">{finances.map(fin => fin.amount).reduce((acc, cur)=> acc+cur, 0) }</span>
+            </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {subjects.map(s => (
-              <label 
-                key={s.id} 
-                className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                  selected[s.code] 
-                    ? 'border-blue-600 bg-blue-50' 
+              <label
+                key={s.id}
+                className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${selected[s.code]
+                    ? 'border-blue-600 bg-blue-50'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                  }`}
               >
-                <input 
-                  type="checkbox" 
-                  checked={!!selected[s.code]} 
+                <input
+                  type="checkbox"
+                  checked={!!selected[s.code]}
                   onChange={() => toggle(s.code)}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                 />
                 <div className="flex-1">
                   <div className="font-medium text-gray-900">{s.code} - {s.name}</div>
                   <div className="text-sm text-gray-600">{s.credits} credits • {s.semester}</div>
+                  <div className="text-sm text-gray-600"> amount: R {s.amount}</div>
                 </div>
               </label>
             ))}
           </div>
-          
+
           <div className="flex justify-between">
             <button
               onClick={() => setStep(1)}
@@ -273,17 +287,19 @@ const FinalizeRegistration: React.FC = () => {
               <CheckCircle className="h-6 w-6 text-green-600 mr-2" />
               <h2 className="text-lg font-semibold text-gray-900">Review Your Registration</h2>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h3 className="font-medium text-gray-900 mb-2">Course Information</h3>
                 <div className="space-y-2 text-sm">
                   <div><span className="text-gray-600">Course:</span> {approvedApp.courseCode}</div>
                   <div><span className="text-gray-600">Year:</span> {year}</div>
+                  <div><span className="text-gray-600">Registration: R </span>1500</div>
                   <div><span className="text-gray-600">Total Credits:</span> {totalCredits}</div>
+                  <div><span className="text-gray-600">Total Amount:R </span> {finances.map(fin => fin.amount).reduce((acc, cur)=> acc+cur, 0)+1500 }</div>
                 </div>
               </div>
-              
+
               <div>
                 <h3 className="font-medium text-gray-900 mb-2">Selected Subjects ({selectedSubjects.length})</h3>
                 <div className="space-y-1 text-sm">
@@ -293,6 +309,7 @@ const FinalizeRegistration: React.FC = () => {
                       <div key={code} className="flex justify-between">
                         <span>{subject?.code}</span>
                         <span className="text-gray-600">{subject?.credits} credits</span>
+                        <span className="text-gray-600">R {subject?.amount}</span>
                       </div>
                     );
                   })}
@@ -312,7 +329,7 @@ const FinalizeRegistration: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="flex justify-between">
             <button
               onClick={() => setStep(2)}

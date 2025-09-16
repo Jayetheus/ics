@@ -113,6 +113,7 @@ export interface Subject {
   name: string;
   credits: number;
   semester: string;
+  amount: number;
 }
 
 export interface Ticket {
