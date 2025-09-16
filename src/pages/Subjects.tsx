@@ -17,7 +17,7 @@ const Subjects: React.FC = () => {
       if (!currentUser) return;
       try {
         const student = await getStudentById(currentUser.uid);
-        const courseCode = (student as any)?.course || (currentUser as any)?.profile?.course?.code || (currentUser as any)?.profile?.course;
+        const courseCode = student?.profile.course
         
         if (courseCode) {
           const [subs, studentResults] = await Promise.all([

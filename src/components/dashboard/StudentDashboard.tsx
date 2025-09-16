@@ -18,7 +18,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import { getResultsByStudent, getTimetable, getPaymentsByStudent, getApplicationsByStudent, getStudentRegistration, getSubjectsByCourse } from '../../services/database';
-import { Result, Timetable, Payment, Application, Registration } from '../../types';
+import { Result, Timetable, Payment, Application} from '../../types';
 import { SkeletonDashboard } from '../common/Skeleton';
 
 const StudentDashboard: React.FC = () => {
