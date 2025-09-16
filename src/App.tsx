@@ -34,6 +34,7 @@ import PaymentProofs from './pages/PaymentProofs';
 import ApplicationsManagement from './pages/ApplicationsManagement';
 import FinalizeRegistration from './pages/FinalizeRegistration';
 import Subjects from './pages/Subjects';
+import CollegeManagement from './pages/CollegeManagement';
 
 const AppContent: React.FC = () => {
   const { notifications, removeNotification } = useNotification();

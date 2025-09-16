@@ -264,7 +264,7 @@ export const getColleges = async () => {
 
 export const updateCollege = async (id: string, data: Partial<College>) => {
   const docRef = doc(db, 'colleges', id);
-  await updateDoc(docRef, data);
+  await setDoc(docRef, data);
 };
 
 export const deleteCollege = async (id: string) => {
