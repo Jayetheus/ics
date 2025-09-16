@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Download, AlertTriangle, CheckCircle, Clock, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getPaymentsByStudent, createPayment } from '../services/database';
+import { getPaymentsByStudent, createPayment, getFinancesByStudentId } from '../services/database';
 import { PAYMENT_TYPES } from '../data/constants';
 import { Payment } from '../types';
 import FileUpload from '../components/common/FileUpload';
-import { serverTimestamp, Timestamp } from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 
 const Finance: React.FC = () => {
   const { currentUser } = useAuth();
+  const [fees, setFees] = useState<any>(0);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -24,8 +25,13 @@ const Finance: React.FC = () => {
       if (!currentUser) return;
       
       try {
-        const paymentsData = await getPaymentsByStudent(currentUser.uid);
+        const [paymentsData, feesData] = await Promise.all([
+          await getPaymentsByStudent(currentUser.uid),
+          await getFinancesByStudentId(currentUser.uid)]
+       );
+
         setPayments(paymentsData);
+        setFees(feesData);
       } catch (error) {
         console.error('Error fetching payments:', error);
       } finally {
@@ -115,7 +121,7 @@ const Finance: React.FC = () => {
     .filter(p => p.status === 'pending')
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const totalFees = 45000; // Sample total fees
+  const totalFees = fees.total; // Sample total fees
   const outstanding = totalFees - totalPaid;
 
   if (loading) {
@@ -154,7 +160,7 @@ const Finance: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Total Fees</p>
-              <p className="text-2xl font-semibold text-gray-900">R{totalFees.toLocaleString()}</p>
+              <p className="text-2xl font-semibold text-gray-900">R{totalFees}</p>
             </div>
           </div>
         </div>
