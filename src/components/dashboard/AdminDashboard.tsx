@@ -1,40 +1,86 @@
-import React from 'react';
-import { 
-  Users, 
-  BookOpen, 
-  CreditCard, 
-  TrendingUp, 
+import React, { useEffect, useState } from 'react';
+import {
+  Users,
+  BookOpen,
   AlertTriangle,
-  CheckCircle,
   Clock,
   FileText,
-  Calendar,
   Settings
 } from 'lucide-react';
+import { Application, Student, Subject } from '../../types';
+import { getAllApplications, getAllSubjects, getStudents } from '../../services/database';
+import { useAuth } from '../../context/AuthContext';
+import { SkeletonDashboard } from '../common/Skeleton';
+import { useNotification } from '../../context/NotificationContext';
+import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard: React.FC = () => {
-  // Sample data
+  const { currentUser } = useAuth();
+  const { addNotification } = useNotification();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [studentsData, subjectData, applicationsData] = await Promise.all([
+          getStudents(),
+          getAllSubjects(),
+          getAllApplications()
+        ]);
+
+        setStudents(studentsData);
+        setSubjects(subjectData);
+        setApplications(applicationsData.filter(app => app.status == 'pending'));
+      } catch (error: any) {
+        console.error('Error fetching dashboard data:', error);
+        setError(error.message || 'Failed to load dashboard data');
+        addNotification({
+          type: 'error',
+          title: 'Dashboard Error',
+          message: 'Failed to load dashboard data. Please try again.',
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    load();
+  }, [currentUser, navigate])
+
+  if(loading){
+    return <SkeletonDashboard/>
+  }
+
+  if (error) {
+      return (
+        <div className="min-h-64 flex items-center justify-center">
+          <div className="text-center">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to load dashboard</h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+
   const stats = {
-    totalStudents: 1247,
-    activeStaff: 89,
-    totalSubjects: 45,
-    pendingApplications: 23,
-    monthlyRevenue: 2340000,
-    outstandingPayments: 890000,
+    totalStudents: students.length,
+    totalSubjects: subjects.length,
+    pendingApplications: applications.length,
   };
-
-  const recentActivities = [
-    { type: 'registration', message: 'New student registration: John Doe', time: '2 hours ago', status: 'pending' },
-    { type: 'payment', message: 'Payment received: R15,000', time: '4 hours ago', status: 'completed' },
-    { type: 'support', message: 'New support ticket from student ID 2024001', time: '6 hours ago', status: 'pending' },
-    { type: 'subject', message: 'Subject schedule updated: Introduction to Programming', time: '1 day ago', status: 'completed' },
-  ];
-
-  const pendingApprovals = [
-    { id: 1, type: 'Student Registration', name: 'Sarah Williams', course: 'Engineering', date: '2025-01-15' },
-    { id: 2, type: 'Subject Change', name: 'Mike Johnson', course: 'Business Studies', date: '2025-01-14' },
-    { id: 3, type: 'Payment Verification', name: 'Lisa Brown', amount: 'R12,500', date: '2025-01-14' },
-  ];
 
   return (
     <div className="space-y-6">
@@ -75,19 +121,6 @@ const AdminDashboard: React.FC = () => {
 
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Users className="h-6 w-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm text-gray-600">Staff Members</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.activeStaff}</p>
-              <p className="text-xs text-gray-500">Lecturers & Admin</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
             <div className="p-2 bg-orange-100 rounded-lg">
               <Clock className="h-6 w-6 text-orange-600" />
             </div>
@@ -95,32 +128,6 @@ const AdminDashboard: React.FC = () => {
               <p className="text-sm text-gray-600">Pending Applications</p>
               <p className="text-2xl font-semibold text-gray-900">{stats.pendingApplications}</p>
               <p className="text-xs text-orange-600">Requires attention</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm text-gray-600">Monthly Revenue</p>
-              <p className="text-2xl font-semibold text-gray-900">R{(stats.monthlyRevenue / 1000000).toFixed(1)}M</p>
-              <p className="text-xs text-green-600">+12.3% from last month</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <CreditCard className="h-6 w-6 text-red-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm text-gray-600">Outstanding Payments</p>
-              <p className="text-2xl font-semibold text-gray-900">R{(stats.outstandingPayments / 1000).toFixed(0)}K</p>
-              <p className="text-xs text-red-600">Follow-up required</p>
             </div>
           </div>
         </div>
@@ -137,14 +144,14 @@ const AdminDashboard: React.FC = () => {
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {pendingApprovals.map((item) => (
+              {applications.slice(0, 3).map((item) => (
                 <div key={item.id} className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">{item.type}</p>
+                    <p className="font-medium text-gray-900">{students.filter(student => student.id === item.studentId)[0].studentNumber}</p>
                     <p className="text-sm text-gray-600">
-                      {item.name} - {item.course || item.amount}
+                      {item.courseCode} - {students.filter(student => student.id === item.studentId)[0].firstName} {students.filter(student => student.id === item.studentId)[0].lastName}
                     </p>
-                    <p className="text-xs text-gray-500">{item.date}</p>
+                    <p className="text-xs text-gray-500">{item.createdAt.toDate().toLocaleDateString()}</p>
                   </div>
                   <div className="flex space-x-2">
                     <button className="px-3 py-1 bg-green-600 text-white text-xs rounded-full hover:bg-green-700 transition-colors">
@@ -153,40 +160,6 @@ const AdminDashboard: React.FC = () => {
                     <button className="px-3 py-1 bg-red-600 text-white text-xs rounded-full hover:bg-red-700 transition-colors">
                       Reject
                     </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Activities */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-              <Clock className="h-5 w-5 mr-2 text-blue-600" />
-              Recent Activities
-            </h2>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {recentActivities.map((activity, index) => (
-                <div key={index} className="flex items-start">
-                  <div className={`p-2 rounded-full mr-3 ${
-                    activity.status === 'completed' ? 'bg-green-100' : 
-                    activity.status === 'pending' ? 'bg-yellow-100' : 'bg-gray-100'
-                  }`}>
-                    {activity.status === 'completed' ? (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    ) : activity.status === 'pending' ? (
-                      <Clock className="h-4 w-4 text-yellow-600" />
-                    ) : (
-                      <AlertTriangle className="h-4 w-4 text-gray-600" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900">{activity.message}</p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
                   </div>
                 </div>
               ))}
@@ -205,29 +178,39 @@ const AdminDashboard: React.FC = () => {
         </div>
         <div className="p-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="flex flex-col items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+            <button className="flex flex-col items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+              onClick={()=>navigate('student-management')}
+            >
               <Users className="h-8 w-8 text-blue-600 mb-2" />
               <span className="text-sm font-medium text-blue-900">Manage Students</span>
             </button>
-            
-            <button className="flex flex-col items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+
+            <button className="flex flex-col items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+              onClick={()=>navigate('/college-management')}
+            >
               <BookOpen className="h-8 w-8 text-purple-600 mb-2" />
               <span className="text-sm font-medium text-purple-900">College Management</span>
             </button>
-            
-            <button className="flex flex-col items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+
+            <button className="flex flex-col items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+              onClick={()=>navigate('/course-management')}
+            >
               <BookOpen className="h-8 w-8 text-green-600 mb-2" />
               <span className="text-sm font-medium text-green-900">Course Management</span>
             </button>
-            
-            <button className="flex flex-col items-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
+
+            <button className="flex flex-col items-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+              onClick={()=>navigate('/applications-management')}
+            >
               <FileText className="h-8 w-8 text-indigo-600 mb-2" />
               <span className="text-sm font-medium text-indigo-900">Applications</span>
             </button>
-            
-            <button className="flex flex-col items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors">
-              <Calendar className="h-8 w-8 text-orange-600 mb-2" />
-              <span className="text-sm font-medium text-orange-900">Timetable</span>
+
+            <button className="flex flex-col items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
+              onClick={()=>navigate('/subject-management')}
+            >
+              <BookOpen className="h-8 w-8 text-orange-600 mb-2" />
+              <span className="text-sm font-medium text-orange-900">Subjects</span>
             </button>
           </div>
         </div>

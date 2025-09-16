@@ -58,7 +58,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       case 'admin':
         return [
           ...baseItems,
-          { icon: Users, label: 'Student Management', path: '/student-management' },
           { icon: BookOpen, label: 'College Management', path: '/college-management' },
           { icon: BookOpen, label: 'Course Management', path: '/course-management' },
           { icon: BookOpen, label: 'Subject Management', path: '/subject-management' },

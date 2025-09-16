@@ -173,10 +173,10 @@ const TimetableManagement: React.FC = () => {
 
   const filteredTimetable = timetable.filter(entry => {
     const matchesSearch = 
-      entry.subjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.subjectCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.lecturer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.venue.toLowerCase().includes(searchTerm.toLowerCase());
+      entry.subjectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      entry.subjectCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      entry.lecturer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      entry.venue?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesDay = filterDay === 'all' || entry.day === filterDay;
     

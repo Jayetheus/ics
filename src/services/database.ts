@@ -82,7 +82,7 @@ export const getResultsByStudentAndSubject = async (studentId: string, subjectCo
 };
 
 //@section: Timetable
-export const createTimetableEntry = async (timetableData: Omit<Timetable, 'id'>) => {
+export const createTimetableEntry = async (timetableData: Omit<Timetable, 'id'|'subjectId'>) => {
   const docRef = await addDoc(collection(db, 'timetable'), timetableData);
   return docRef.id;
 };

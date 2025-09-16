@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, Calendar, Award, Users, ArrowRight } from 'lucide-react';
+import { BookOpen, Calendar, Award, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getSubjectsByCourse, getStudentById, getResultsByStudent } from '../services/database';
 import { Subject, Result } from '../types';

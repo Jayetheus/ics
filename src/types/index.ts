@@ -79,7 +79,6 @@ export interface Result {
 export interface Timetable {
   courseName: string;
   id: string;
-  subjectId: string;
   subjectName: string;
   subjectCode: string;
   courseCode: string;
