@@ -82,7 +82,7 @@ const Register: React.FC = () => {
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
           <div className="mx-auto h-20 w-20 bg-blue-600 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-2xl">ICS</span>
+            <span className="text-white font-bold text-2xl">EduTech</span>
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             Create Your Account
@@ -187,7 +187,7 @@ const Register: React.FC = () => {
                 value={formData.email}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="your.email@ics.ac.za"
+                placeholder="your.email@EduTech.ac.za"
               />
             </div>
 

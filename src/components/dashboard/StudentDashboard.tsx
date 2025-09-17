@@ -122,7 +122,7 @@ const StudentDashboard: React.FC = () => {
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white text-center">
           <User className="h-12 w-12 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Welcome to ICS!</h1>
+          <h1 className="text-2xl font-bold mb-2">Welcome to EduTech!</h1>
           <p className="opacity-90">Let's get you started with your academic journey</p>
         </div>
         

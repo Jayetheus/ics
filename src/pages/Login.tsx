@@ -54,10 +54,10 @@ const Login: React.FC = () => {
 
   // Demo accounts for quick testing
   const demoAccounts = [
-    { role: 'Student', email: 'student@ics.ac.za', password: 'password123' },
-    { role: 'Lecturer', email: 'lecturer@ics.ac.za', password: 'password123' },
-    { role: 'Admin', email: 'admin@ics.ac.za', password: 'password123' },
-    { role: 'Finance', email: 'finance@ics.ac.za', password: 'password123' },
+    { role: 'Student', email: 'student@EduTech.ac.za', password: 'password123' },
+    { role: 'Lecturer', email: 'lecturer@EduTech.ac.za', password: 'password123' },
+    { role: 'Admin', email: 'admin@EduTech.ac.za', password: 'password123' },
+    { role: 'Finance', email: 'finance@EduTech.ac.za', password: 'password123' },
   ];
 
   const fillDemo = (email: string, password: string) => {
@@ -70,10 +70,10 @@ const Login: React.FC = () => {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="mx-auto h-20 w-20 bg-blue-600 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-2xl">ICS</span>
+            <span className="text-white font-bold text-2xl">EduTech</span>
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Welcome to ICS
+            Welcome to EduTech
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             Integrated College System - South Africa
@@ -104,7 +104,7 @@ const Login: React.FC = () => {
                     ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
                     : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
                 } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:z-10 sm:text-sm`}
-                placeholder="student@ics.ac.za"
+                placeholder="student@EduTech.ac.za"
                 aria-invalid={touched.email && !!errors.email}
                 aria-describedby={touched.email && errors.email ? 'email-error' : undefined}
               />
