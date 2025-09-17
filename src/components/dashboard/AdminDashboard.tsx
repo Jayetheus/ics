@@ -147,9 +147,9 @@ const AdminDashboard: React.FC = () => {
               {applications.slice(0, 3).map((item) => (
                 <div key={item.id} className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">{students.filter(student => student.id === item.studentId)[0].studentNumber}</p>
+                    <p className="font-medium text-gray-900">{students.filter(student => student.id === item.studentId)[0]?.firstName}</p>
                     <p className="text-sm text-gray-600">
-                      {item.courseCode} - {students.filter(student => student.id === item.studentId)[0].firstName} {students.filter(student => student.id === item.studentId)[0].lastName}
+                      {item.courseCode} - {students.filter(student => student.id === item.studentId)[0]?.firstName} {students.filter(student => student.id === item.studentId)[0]?.lastName}
                     </p>
                     <p className="text-xs text-gray-500">{item.createdAt.toDate().toLocaleDateString()}</p>
                   </div>
