@@ -53,7 +53,7 @@ const UserManagement: React.FC = () => {
       role: 'lecturer' as const,
       type: 'lecturer' as const,
       staffNumber: lecturer.staffNumber,
-      department: lecturer.department,
+      department: lecturer?.department,
       collegeId: lecturer.collegeId
     }))
   ];
@@ -259,7 +259,7 @@ const UserManagement: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <select
                     required
-                    value={newLecturer.department || ''}
+                    value={newLecturer?.department || ''}
                     onChange={e => setNewLecturer({ ...newLecturer, department: e.target.value })}
                     className="border px-3 py-2 rounded w-full"
                   >
@@ -412,8 +412,8 @@ const UserManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {user.role === 'lecturer' ? (
                       <div>
-                        <div className="font-medium">{lecturers.filter(lect => lect.uid == user.uid)[0].department}</div>
-                        <div className="text-xs text-gray-500">Staff: {lecturers.filter(lect => lect.uid == user.uid)[0].staffNumber}</div>
+                        <div className="font-medium">{lecturers.filter(lect => lect.uid == user.uid)[0]?.department}</div>
+                        <div className="text-xs text-gray-500">Staff: {lecturers.filter(lect => lect.uid == user.uid)[0]?.staffNumber}</div>
                       </div>
                     ) : (
                       <div className="text-gray-400">-</div>
