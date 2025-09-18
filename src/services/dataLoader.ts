@@ -25,14 +25,14 @@ export const generateStudentNumber = async (): Promise<string> => {
   return `${currentYear}${nextNumber.toString().padStart(6, '0')}`;
 };
 
-// Generate staff number in format: STAFF + sequential number (e.g., STAFF001234)
+// Generate staff number in format: LEC + sequential number (e.g., LEC001234)
 export const generateStaffNumber = async (): Promise<string> => {
-  const usersRef = collection(db, 'users');
-  const q = query(usersRef, where('profile.staffNumber', '>=', 'STAFF000000'));
+  const lecturersRef = collection(db, 'lecturers');
+  const q = query(lecturersRef, where('staffNumber', '>=', 'LEC000000'), where('staffNumber', '<', 'LEC999999'));
   const snapshot = await getDocs(q);
   
   const nextNumber = snapshot.size + 1;
-  return `STAFF${nextNumber.toString().padStart(6, '0')}`;
+  return `LEC${nextNumber.toString().padStart(6, '0')}`;
 };
 
 // Clear all collections

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, User, Download, Filter } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getTimetable } from '../services/database';
+import { getTimetable, getTimetableByCourse, getStudentRegistration } from '../services/database';
 import { Timetable as TimetableType } from '../types';
 
 const Timetable: React.FC = () => {
@@ -13,9 +13,21 @@ const Timetable: React.FC = () => {
 
   useEffect(() => {
     const fetchTimetable = async () => {
+      if (!currentUser) return;
+      
       try {
-        const timetableData = await getTimetable();
-        setTimetable(timetableData);
+        setLoading(true);
+        // Get student's course registration
+        const registration = await getStudentRegistration(currentUser.uid);
+        
+        if (registration?.courseCode) {
+          // Get timetable for the student's specific course
+          const timetableData = await getTimetableByCourse(registration.courseCode);
+          setTimetable(timetableData);
+        } else {
+          // If no course registered, show empty timetable
+          setTimetable([]);
+        }
       } catch (error) {
         console.error('Error fetching timetable:', error);
       } finally {

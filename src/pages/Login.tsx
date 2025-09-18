@@ -54,9 +54,9 @@ const Login: React.FC = () => {
 
   // Demo accounts for quick testing
   const demoAccounts = [
-    { role: 'Student', email: 'student@EduTech.ac.za', password: 'password123' },
+    { role: 'Student', email: 'jayastro10@gmail.com', password: '123456' },
     { role: 'Lecturer', email: 'lecturer@EduTech.ac.za', password: 'password123' },
-    { role: 'Admin', email: 'admin@EduTech.ac.za', password: 'password123' },
+    { role: 'Admin', email: 'admin@edutech.co.za', password: '123456' },
     { role: 'Finance', email: 'finance@EduTech.ac.za', password: 'password123' },
   ];
 

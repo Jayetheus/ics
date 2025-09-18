@@ -3,7 +3,8 @@ import { Timestamp } from "firebase/firestore";
 export interface User {
   uid: string;
   email: string;
-  displayName?: string;
+  firstName: string;
+  lastName: string;
   role: UserRole;
   profile?: UserProfile;
 }
@@ -35,10 +36,29 @@ export interface Student {
   year: number;
   status: 'active' | 'inactive' | 'suspended';
   registrationDate: string;
-  profile: UserProfile;
+  examNumber: string;
+  results: any[];
+}
+
+export interface Lecturer {
+  uid: string;
+  staffNumber: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  department: string;
+  collegeId: string;
+  status: 'active' | 'inactive' | 'suspended';
+  hireDate: string;
+  phone?: string;
+  address?: string;
+  qualifications?: string;
+  subjects?: string[]; // Array of subject IDs
 }
 
 export interface Course {
+  requirements: string;
+  apsRequired: string;
   id: string;
   code: string;
   name: string;
@@ -77,17 +97,22 @@ export interface Result {
 }
 
 export interface Timetable {
-  courseName: string;
   id: string;
-  subjectName: string;
-  subjectCode: string;
   courseCode: string;
-  lecturer: string;
+  courseName: string;
+  subjectCode: string;
+  subjectName: string;
+  lecturerId: string;
+  lecturerName: string;
   day: string;
   startTime: string;
   endTime: string;
   venue: string;
   type: 'lecture' | 'practical' | 'tutorial';
+  semester: 1 | 2;
+  year: number;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export interface Payment {

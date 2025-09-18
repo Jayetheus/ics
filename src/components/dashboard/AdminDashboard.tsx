@@ -5,7 +5,8 @@ import {
   AlertTriangle,
   Clock,
   FileText,
-  Settings
+  Settings,
+  Calendar
 } from 'lucide-react';
 import { Application, Student, Subject } from '../../types';
 import { getAllApplications, getAllSubjects, getStudents } from '../../services/database';
@@ -177,12 +178,12 @@ const AdminDashboard: React.FC = () => {
           </h2>
         </div>
         <div className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <button className="flex flex-col items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-              onClick={()=>navigate('student-management')}
+              onClick={()=>navigate('/user-management')}
             >
               <Users className="h-8 w-8 text-blue-600 mb-2" />
-              <span className="text-sm font-medium text-blue-900">Manage Students</span>
+              <span className="text-sm font-medium text-blue-900">User Management</span>
             </button>
 
             <button className="flex flex-col items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
@@ -199,18 +200,26 @@ const AdminDashboard: React.FC = () => {
               <span className="text-sm font-medium text-green-900">Course Management</span>
             </button>
 
-            <button className="flex flex-col items-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
-              onClick={()=>navigate('/applications-management')}
-            >
-              <FileText className="h-8 w-8 text-indigo-600 mb-2" />
-              <span className="text-sm font-medium text-indigo-900">Applications</span>
-            </button>
-
             <button className="flex flex-col items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
               onClick={()=>navigate('/subject-management')}
             >
               <BookOpen className="h-8 w-8 text-orange-600 mb-2" />
-              <span className="text-sm font-medium text-orange-900">Subjects</span>
+              <span className="text-sm font-medium text-orange-900">Subject Management</span>
+            </button>
+
+
+            <button className="flex flex-col items-center p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors"
+              onClick={()=>navigate('/applications-management')}
+            >
+              <FileText className="h-8 w-8 text-yellow-600 mb-2" />
+              <span className="text-sm font-medium text-yellow-900">Applications</span>
+            </button>
+
+            <button className="flex flex-col items-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+              onClick={()=>navigate('/timetable-management')}
+            >
+              <Calendar className="h-8 w-8 text-indigo-600 mb-2" />
+              <span className="text-sm font-medium text-indigo-900">Timetable Management</span>
             </button>
           </div>
         </div>

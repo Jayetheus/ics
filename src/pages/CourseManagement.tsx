@@ -1,33 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Edit, Trash2, BookOpen, Users, Save, X } from 'lucide-react';
 import { getCourses, createCourse, updateCourse, deleteCourse, getColleges } from '../services/database';
+import { getLecturers } from '../services/database';
 import { useNotification } from '../context/NotificationContext';
-import { Course, College } from '../types';
+import { Course, College, Lecturer } from '../types';
 import { DEPARTMENTS } from '../data/constants';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const CourseManagement: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [colleges, setColleges] = useState<College[]>([]);
+  const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('all');
   const [filterCollege, setFilterCollege] = useState('all');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  
   const [formData, setFormData] = useState({
     code: '',
     name: '',
     credits: 16,
     lecturer: '',
     department: DEPARTMENTS[0],
-    collegeId: ''
+    collegeId: '',
+    apsRequired: '',
+    requirements: ''
   });
   const { addNotification } = useNotification();
 
   useEffect(() => {
-    fetchCourses();
+  fetchCourses();
+  fetchLecturers();
   }, []);
+
+
+  const fetchLecturers = async () => {
+    try {
+      const lecturersData = await getLecturers();
+      setLecturers(lecturersData);
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to load lecturers'
+      });
+    }
+  };
 
   const fetchCourses = async () => {
     try {
@@ -49,10 +69,12 @@ const CourseManagement: React.FC = () => {
     }
   };
 
+  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.code || !formData.name || !formData.lecturer || !formData.collegeId) {
+    if (!formData.code || !formData.name || !formData.lecturer || !formData.collegeId || !formData.apsRequired || !formData.requirements) {
       addNotification({
         type: 'error',
         title: 'Validation Error',
@@ -99,7 +121,9 @@ const CourseManagement: React.FC = () => {
       credits: course.credits,
       lecturer: course.lecturer,
       department: course.department,
-      collegeId: course.collegeId
+      collegeId: course.collegeId,
+      apsRequired: course.apsRequired || '',
+      requirements: course.requirements || ''
     });
     setShowAddForm(true);
   };
@@ -134,7 +158,9 @@ const CourseManagement: React.FC = () => {
       credits: 16,
       lecturer: '',
       department: DEPARTMENTS[0],
-      collegeId: ''
+      collegeId: '',
+      apsRequired: '',
+      requirements: ''
     });
     setEditingCourse(null);
     setShowAddForm(false);
@@ -250,7 +276,6 @@ const CourseManagement: React.FC = () => {
                   placeholder="e.g., CS101"
                 />
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Credits
@@ -265,7 +290,6 @@ const CourseManagement: React.FC = () => {
                 />
               </div>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Course Name *
@@ -279,22 +303,23 @@ const CourseManagement: React.FC = () => {
                 placeholder="e.g., Introduction to Computer Science"
               />
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Lecturer *
                 </label>
-                <input
-                  type="text"
+                <select
                   required
                   value={formData.lecturer}
                   onChange={(e) => setFormData({ ...formData, lecturer: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., Dr. John Smith"
-                />
+                >
+                  <option value="">Select Lecturer</option>
+                  {lecturers.map(lecturer => (
+                    <option key={lecturer.uid} value={lecturer.uid}>{lecturer.lastName} {lecturer.lastName}</option>
+                  ))}
+                </select>
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Department
@@ -310,10 +335,54 @@ const CourseManagement: React.FC = () => {
                 </select>
               </div>
             </div>
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  College *
+                </label>
+                <select
+                  required
+                  value={formData.collegeId}
+                  onChange={(e) => setFormData({ ...formData, collegeId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select College</option>
+                  {colleges.map(college => (
+                    <option key={college.id} value={college.id}>{college.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  APS Required *
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={formData.apsRequired}
+                  onChange={(e) => setFormData({ ...formData, apsRequired: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., 30"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Course Requirements *
+              </label>
+              <textarea
+                required
+                value={formData.requirements}
+                onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                placeholder="e.g., Must have passed Mathematics and English"
+              />
+            </div>
             <div className="flex space-x-3">
               <button
                 type="submit"
+                disabled={loading}
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 <Save className="h-4 w-4 mr-2" />

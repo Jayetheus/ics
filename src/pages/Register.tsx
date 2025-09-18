@@ -2,12 +2,88 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
-import { COLLEGES, COURSES } from '../data/constants';
-import { generateStudentNumber, generateStaffNumber } from '../services/dataLoader';
+import { generateStudentNumber } from '../services/dataLoader';
 import { Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 
 const Register: React.FC = () => {
-  const [formData, setFormData] = useState({
+
+  const languageSubjects = [
+    "English Home Language",
+    "English First Additional Language",
+    "Afrikaans Home Language",
+    "Afrikaans First Additional Language",
+    "isiZulu Home Language",
+    "isiZulu First Additional Language",
+    "isiXhosa Home Language",
+    "isiXhosa First Additional Language",
+    "Sesotho Home Language",
+    "Sesotho First Additional Language",
+    "Setswana Home Language",
+    "Setswana First Additional Language",
+    "Sepedi Home Language",
+    "Sepedi First Additional Language",
+    "Xitsonga Home Language",
+    "Xitsonga First Additional Language",
+    "Tshivenda Home Language",
+    "Tshivenda First Additional Language",
+    "Siswati Home Language",
+    "Siswati First Additional Language",
+  ];
+
+  const mathsSubjects = [
+    "Mathematics",
+    "Mathematical Literacy",
+  ];
+
+  const otherMatricSubjects = [
+    "Physical Sciences",
+    "Life Sciences",
+    "Accounting",
+    "Business Studies",
+    "Economics",
+    "Geography",
+    "History",
+    "Information Technology",
+    "Computer Applications Technology",
+    "Consumer Studies",
+    "Tourism",
+    "Visual Arts",
+    "Music",
+    "Engineering Graphics and Design",
+    "Dramatic Arts",
+    "Agricultural Sciences",
+    "Religion Studies",
+    "Technical Mathematics",
+    "Technical Sciences",
+    "Civil Technology",
+    "Electrical Technology",
+    "Mechanical Technology",
+    "Hospitality Studies",
+    "Dance Studies",
+    "Design",
+    "Languages (Other Foreign Languages)",
+  ];
+
+
+
+
+  type Result = { subject: string; result: number };
+
+  const [formData, setFormData] = useState<{
+    email: string;
+    password: string;
+    confirmPassword: string;
+    role: UserRole;
+    firstName: string;
+    lastName: string;
+    college: string;
+    course: string;
+    year: number;
+    phone: string;
+    idNumber: string;
+    examNumber: string;
+    results: Result[];
+  }>({
     email: '',
     password: '',
     confirmPassword: '',
@@ -15,26 +91,67 @@ const Register: React.FC = () => {
     firstName: '',
     lastName: '',
     college: '',
-    course: COURSES[0],
+    course: '',
     year: 1,
     phone: '',
     idNumber: '',
+    examNumber: '',
+    results: [],
   });
+
+
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const { register, currentUser } = useAuth();
   const navigate = useNavigate();
 
 
 
-  useEffect(()=>{ if (currentUser) navigate("/", { replace: true })}, [currentUser, navigate]);
+
+  useEffect(() => { if (currentUser) navigate("/", { replace: true }) }, [currentUser, navigate]);
+
+  // Helper to pick n random unique items from an array
+    const pickRandom = <T,>(arr: T[], n: number): T[] => {
+      const copy = [...arr];
+      const result: T[] = [];
+      while (result.length < n && copy.length) {
+        const idx = Math.floor(Math.random() * copy.length);
+        result.push(copy.splice(idx, 1)[0]);
+      }
+      return result;
+    };
+
+  function generateRandomResults() {
+    
+
+    // Pick 2 languages
+    const languages = pickRandom(languageSubjects, 2);
+
+    // Pick 1 maths subject
+    const maths = pickRandom(mathsSubjects, 1);
+
+    // Pick 4 other subjects
+    const others = pickRandom(otherMatricSubjects, 4);
+
+    // Helper to generate a random result (1-7)
+    const randomResult = () => Math.floor(Math.random() * 7) + 1;
+
+    // Build results array
+    const results = [
+      ...languages.map(subject => ({ subject, result: randomResult() })),
+      ...maths.map(subject => ({ subject, result: randomResult() })),
+      ...others.map(subject => ({ subject, result: randomResult() })),
+    ];
+    
+    return results;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formData.password !== formData.confirmPassword) {
       return setError('Passwords do not match');
     }
@@ -43,10 +160,14 @@ const Register: React.FC = () => {
       return setError('Password must be at least 6 characters');
     }
 
+    if (formData.examNumber.length !== 10) {
+      return setError('Password must be at least 10 numbers');
+    }
+
     try {
       setError('');
       setLoading(true);
-      
+
       const profileData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -58,9 +179,8 @@ const Register: React.FC = () => {
           year: formData.year,
           studentNumber: await generateStudentNumber(),
         } : {}),
-        ...(formData.role !== 'student' ? {
-          staffNumber: await generateStaffNumber(),
-        } : {}),
+        examNumber: formData.examNumber,
+        results: formData.results,
       };
 
       await register(formData.email, formData.password, formData.role, profileData);
@@ -74,6 +194,12 @@ const Register: React.FC = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (e.target.name==="examNumber" && e.target.value.length === 10) {
+      const results = generateRandomResults()
+      setFormData({ ...formData, [e.target.name]: e.target.value, results });
+      return
+    }
+
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -108,43 +234,6 @@ const Register: React.FC = () => {
               </div>
             )}
 
-            {/* Role Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Account Type
-              </label>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="student">Student</option>
-                <option value="lecturer">Lecturer</option>
-                <option value="admin">Administrator</option>
-                <option value="finance">Finance Staff</option>
-              </select>
-            </div>
-
-            {/* College Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                College/University
-              </label>
-              <select
-                name="college"
-                required
-                value={formData.college}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Select College/University</option>
-                {COLLEGES.map(college => (
-                  <option key={college} value={college}>{college}</option>
-                ))}
-              </select>
-            </div>
-
             {/* Personal Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -160,7 +249,7 @@ const Register: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Last Name
@@ -218,7 +307,7 @@ const Register: React.FC = () => {
                   </button>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Confirm Password
@@ -234,47 +323,6 @@ const Register: React.FC = () => {
               </div>
             </div>
 
-            {/* Role-specific fields */}
-            {formData.role === 'student' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Course
-                  </label>
-                  <select
-                    name="course"
-                    required
-                    value={formData.course}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {COURSES.map(course => (
-                      <option key={course} value={course}>{course}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Year of Study
-                  </label>
-                  <select
-                    name="year"
-                    required
-                    value={formData.year}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value={1}>1st Year</option>
-                    <option value={2}>2nd Year</option>
-                    <option value={3}>3rd Year</option>
-                    <option value={4}>4th Year</option>
-                    <option value={5}>5th Year</option>
-                  </select>
-                </div>
-              </div>
-            ) : null}
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -289,7 +337,50 @@ const Register: React.FC = () => {
                   placeholder="e.g. 083 123 4567"
                 />
               </div>
-              
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Exam Number
+                </label>
+                <input
+                  type="text"
+                  name="examNumber"
+                  required
+                  value={formData.examNumber}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Matric Results (auto-generated)
+                </label>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 border rounded-md">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Result</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-100">
+                      {formData.results.length === 0 ? (
+                        <tr>
+                          <td colSpan={2} className="px-4 py-2 text-gray-400 text-center">Results will be generated on registration</td>
+                        </tr>
+                      ) : (
+                        formData.results.map((res, idx) => (
+                          <tr key={idx}>
+                            <td className="px-4 py-2 text-gray-700">{res.subject}</td>
+                            <td className="px-4 py-2 text-gray-700">{res.result}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   ID Number

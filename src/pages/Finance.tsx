@@ -121,7 +121,7 @@ const Finance: React.FC = () => {
     .filter(p => p.status === 'pending')
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const totalFees = fees.total; // Sample total fees
+  const totalFees = fees.total || 0; // Get from database
   const outstanding = totalFees - totalPaid;
 
   if (loading) {
