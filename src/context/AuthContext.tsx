@@ -9,7 +9,7 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import { User, UserRole } from '../types';
-import { Turntable } from 'lucide-react';
+
 
 interface AuthContextType {
   currentUser: User | null;
@@ -41,11 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (userDoc.exists()) {
             const userData = userDoc.data();
             setCurrentUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email!,
-              displayName: firebaseUser.displayName || undefined,
-              role: userData.role,
-              profile: userData.profile,
+              ...userData as User
             });
 
           } else {
@@ -79,7 +75,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userData = {
       email,
       role,
-      profile: additionalData,
+      uid: user.uid,
+      ...additionalData,
       createdAt: new Date().toISOString(),
     };
 

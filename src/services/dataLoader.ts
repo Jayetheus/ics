@@ -25,14 +25,14 @@ export const generateStudentNumber = async (): Promise<string> => {
   return `${currentYear}${nextNumber.toString().padStart(6, '0')}`;
 };
 
-// Generate staff number in format: STAFF + sequential number (e.g., STAFF001234)
+// Generate staff number in format: LEC + sequential number (e.g., LEC001234)
 export const generateStaffNumber = async (): Promise<string> => {
-  const usersRef = collection(db, 'users');
-  const q = query(usersRef, where('profile.staffNumber', '>=', 'STAFF000000'));
+  const lecturersRef = collection(db, 'lecturers');
+  const q = query(lecturersRef, where('staffNumber', '>=', 'LEC000000'), where('staffNumber', '<', 'LEC999999'));
   const snapshot = await getDocs(q);
   
   const nextNumber = snapshot.size + 1;
-  return `STAFF${nextNumber.toString().padStart(6, '0')}`;
+  return `LEC${nextNumber.toString().padStart(6, '0')}`;
 };
 
 // Clear all collections
@@ -60,7 +60,7 @@ export const clearAllData = async () => {
 export const loadMockUsers = async () => {
   const mockUsers = [
     {
-      email: 'student@ics.ac.za',
+      email: 'student@EduTech.ac.za',
       password: 'password123',
       role: 'student' as UserRole,
       profile: {
@@ -75,7 +75,7 @@ export const loadMockUsers = async () => {
       }
     },
     {
-      email: 'lecturer@ics.ac.za',
+      email: 'lecturer@EduTech.ac.za',
       password: 'password123',
       role: 'lecturer' as UserRole,
       profile: {
@@ -88,7 +88,7 @@ export const loadMockUsers = async () => {
       }
     },
     {
-      email: 'admin@ics.ac.za',
+      email: 'admin@EduTech.ac.za',
       password: 'password123',
       role: 'admin' as UserRole,
       profile: {
@@ -101,7 +101,7 @@ export const loadMockUsers = async () => {
       }
     },
     {
-      email: 'finance@ics.ac.za',
+      email: 'finance@EduTech.ac.za',
       password: 'password123',
       role: 'finance' as UserRole,
       profile: {
@@ -149,7 +149,7 @@ export const loadMockStudents = async () => {
     {
       firstName: 'Emma',
       lastName: 'Wilson',
-      email: 'emma.wilson@student.ics.ac.za',
+      email: 'emma.wilson@student.EduTech.ac.za',
       course: COURSES[1], // Information Technology
       year: 1,
       status: 'active' as const,
@@ -167,7 +167,7 @@ export const loadMockStudents = async () => {
     {
       firstName: 'David',
       lastName: 'Miller',
-      email: 'david.miller@student.ics.ac.za',
+      email: 'david.miller@student.EduTech.ac.za',
       course: COURSES[6], // Business Management
       year: 3,
       status: 'active' as const,
@@ -185,7 +185,7 @@ export const loadMockStudents = async () => {
     {
       firstName: 'Sophie',
       lastName: 'Taylor',
-      email: 'sophie.taylor@student.ics.ac.za',
+      email: 'sophie.taylor@student.EduTech.ac.za',
       course: COURSES[17], // Medicine
       year: 4,
       status: 'active' as const,

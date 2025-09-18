@@ -15,23 +15,19 @@ import Results from './pages/Results';
 import Timetable from './pages/Timetable';
 import Finance from './pages/Finance';
 import Documents from './pages/Documents';
-import StudentManagement from './pages/StudentManagement';
+import UserManagement from './pages/UserManagement';
 import PaymentManagement from './pages/PaymentManagement';
 import Applications from './pages/Applications';
 import Courses from './pages/Courses';
 import Schedule from './pages/Schedule';
 import ResultsEntry from './pages/ResultsEntry';
 import CourseManagement from './pages/CourseManagement';
-import TimetableManagement from './pages/TimetableManagement';
-import AssetManagement from './pages/AssetManagement';
-import Reports from './pages/Reports';
-import HelpdeskManagement from './pages/HelpdeskManagement';
-import Settings from './pages/Settings';
 import SubjectManagement from './pages/SubjectManagement';
 import StudentFinance from './pages/StudentFinance';
 import FinancialReports from './pages/FinancialReports';
 import PaymentProofs from './pages/PaymentProofs';
 import ApplicationsManagement from './pages/ApplicationsManagement';
+import TimetableManagement from './pages/TimetableManagement';
 import FinalizeRegistration from './pages/FinalizeRegistration';
 import Subjects from './pages/Subjects';
 import CollegeManagement from './pages/CollegeManagement';
@@ -102,7 +98,7 @@ const AppContent: React.FC = () => {
             {/* Staff/Admin routes */}
             <Route path="students" element={
               <ProtectedRoute allowedRoles={['lecturer']}>
-                <StudentManagement />
+                <UserManagement />
               </ProtectedRoute>
             } />
             <Route path="courses" element={
@@ -120,9 +116,9 @@ const AppContent: React.FC = () => {
                 <ResultsEntry />
               </ProtectedRoute>
             } />
-            <Route path="student-management" element={
+            <Route path="user-management" element={
               <ProtectedRoute allowedRoles={['admin']}>
-                <StudentManagement />
+                <UserManagement />
               </ProtectedRoute>
             } />
             <Route path="college-management" element={
@@ -148,31 +144,6 @@ const AppContent: React.FC = () => {
             <Route path="timetable-management" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <TimetableManagement />
-              </ProtectedRoute>
-            } />
-            <Route path="asset-management" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AssetManagement />
-              </ProtectedRoute>
-            } />
-            <Route path="reports" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <Reports />
-              </ProtectedRoute>
-            } />
-            <Route path="helpdesk-management" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <HelpdeskManagement />
-              </ProtectedRoute>
-            } />
-            <Route path="applications-management" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <ApplicationsManagement />
-              </ProtectedRoute>
-            } />
-            <Route path="settings" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <Settings />
               </ProtectedRoute>
             } />
 

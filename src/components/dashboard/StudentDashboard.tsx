@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { getResultsByStudent, getTimetable, getPaymentsByStudent, getApplicationsByStudent, getStudentRegistration, getSubjectsByCourse } from '../../services/database';
+import { getResultsByStudent, getTimetable, getTimetableByCourse, getPaymentsByStudent, getApplicationsByStudent, getStudentRegistration, getSubjectsByCourse, getFinancesByStudentId, getStudentById } from '../../services/database';
 import { Result, Timetable, Payment, Application} from '../../types';
 import { SkeletonDashboard } from '../common/Skeleton';
 
@@ -31,6 +31,8 @@ const StudentDashboard: React.FC = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [registration, setRegistration] = useState<any>();
   const [subjectsNumber, setSubjectsNumber] = useState<number>(0);
+  const [studentData, setStudentData] = useState<any>(null);
+  const [finances, setFinances] = useState<any>({ records: [], total: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -38,23 +40,38 @@ const StudentDashboard: React.FC = () => {
     const fetchData = async () => {
       if (!currentUser) return;
       
+
+      console.log(currentUser.uid)
       try {
         setError(null);
-        const [resultsData, timetableData, paymentsData, applicationsData, regs, subjectsNumber] = await Promise.all([
+        const [resultsData, paymentsData, applicationsData, regs, studentInfo, financesData] = await Promise.all([
           getResultsByStudent(currentUser.uid),
-          getTimetable(),
           getPaymentsByStudent(currentUser.uid),
           getApplicationsByStudent(currentUser.uid),
           getStudentRegistration(currentUser.uid),
-          getSubjectsByCourse(await getStudentRegistration(currentUser.uid).then(r => r?.courseCode || ''))
+          getStudentById(currentUser.uid),
+          getFinancesByStudentId(currentUser.uid)
         ]);
+        
+        // Get timetable for the student's course if registered
+        let timetableData: Timetable[] = [];
+        if (regs?.courseCode) {
+          timetableData = await getTimetableByCourse(regs.courseCode);
+        }
         
         setResults(resultsData);
         setTimetable(timetableData);
         setPayments(paymentsData);
         setApplications(applicationsData);
         setRegistration(regs);
-        setSubjectsNumber(subjectsNumber.length);
+        setStudentData(studentInfo);
+        setFinances(financesData);
+        
+        // Get subjects count if registration exists
+        if (regs?.courseCode) {
+          const subjects = await getSubjectsByCourse(regs.courseCode);
+          setSubjectsNumber(subjects.length);
+        }
       } catch (error: any) {
         console.error('Error fetching dashboard data:', error);
         setError(error.message || 'Failed to load dashboard data');
@@ -82,10 +99,11 @@ const StudentDashboard: React.FC = () => {
   const hasApprovedApplication = applications.some(app => app.status === 'approved');
   const hasActiveRegistration = registration && registration.year;
   const needsApplication = !hasApprovedApplication && !hasActiveRegistration;
+  const canRegister = hasApprovedApplication && !hasActiveRegistration;
 
   // Calculate finance status
   const totalPaid = payments.filter(p => p.status === 'approved').reduce((sum, p) => sum + p.amount, 0);
-  const totalFees = 45000; // This could be fetched from a fees structure
+  const totalFees = finances.total || 0; // Get from database
   const outstandingAmount = totalFees - totalPaid;
   const financeStatus = {
     totalFees,
@@ -122,7 +140,7 @@ const StudentDashboard: React.FC = () => {
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white text-center">
           <User className="h-12 w-12 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Welcome to ICS!</h1>
+          <h1 className="text-2xl font-bold mb-2">Welcome to EduTech!</h1>
           <p className="opacity-90">Let's get you started with your academic journey</p>
         </div>
         
@@ -159,13 +177,13 @@ const StudentDashboard: React.FC = () => {
       {/* Welcome Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white">
         <h1 className="text-2xl font-bold">
-          Welcome back, {currentUser?.profile?.firstName || 'Student'}!
+          Welcome back, {studentData?.firstName || currentUser?.firstName || 'Student'}!
         </h1>
         <p className="mt-2 opacity-90">
           {registration?.courseCode} - Year {registration?.year}
         </p>
         <p className="text-sm opacity-75">
-          Student Number: {currentUser?.profile?.studentNumber}
+          Student Number: {studentData?.studentNumber || 'N/A'}
         </p>
       </div>
 

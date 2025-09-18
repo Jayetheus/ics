@@ -6,7 +6,6 @@ import Sidebar from './Sidebar';
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Close sidebar on mobile when clicking outside
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
@@ -19,24 +18,26 @@ const Layout: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-16">
       <Navbar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-      
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-20 bg-black bg-opacity-50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-      
-      <div className="lg:ml-64 pt-16">
-        <main className="p-4 pt-4 sm:p-6">
-          <div className="max-w-7xl mx-auto">
-            <Outlet/>
-          </div>
-        </main>
+      <div className="lg:flex">
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        
+        {/* Mobile overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 z-20 bg-black bg-opacity-50 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        
+        <div className="flex-1">
+          <main className="p-4">
+            <div className="max-w-7xl mx-auto">
+              <Outlet/>
+            </div>
+          </main>
+        </div>
       </div>
     </div>
   );

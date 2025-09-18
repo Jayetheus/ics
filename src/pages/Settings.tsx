@@ -11,7 +11,7 @@ const Settings: React.FC = () => {
   const [settings, setSettings] = useState({
     general: {
       institutionName: 'Integrated College System',
-      institutionCode: 'ICS',
+      institutionCode: 'EduTech',
       academicYear: '2024',
       semester: 'Semester 1',
       timezone: 'Africa/Johannesburg',
@@ -22,8 +22,8 @@ const Settings: React.FC = () => {
       smtpPort: '587',
       smtpUser: '',
       smtpPassword: '',
-      fromEmail: 'noreply@ics.ac.za',
-      fromName: 'ICS System',
+      fromEmail: 'noreply@EduTech.ac.za',
+      fromName: 'EduTech System',
     },
     security: {
       passwordMinLength: 8,

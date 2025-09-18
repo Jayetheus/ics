@@ -38,7 +38,7 @@ const Navbar: React.FC<NavbarProps> = ({ sidebarOpen, setSidebarOpen }) => {
             
             <Link to="/" className="flex items-center ml-4 lg:ml-0">
               <div className="bg-blue-600 text-white p-2 rounded-lg">
-                <span className="font-bold text-xl">ICS</span>
+                <span className="font-bold text-xl">EduTech</span>
               </div>
               <div className="ml-3">
                 <h1 className="text-xl font-semibold text-gray-900">Integrated College System</h1>
