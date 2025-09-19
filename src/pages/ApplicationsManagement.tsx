@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getAllApplications, updateApplicationStatus, getCourses, getStudentById } from '../services/database';
+import { emailService } from '../services/emailService';
 import { Application, Course, Student } from '../types';
 import { CheckCircle, X, Search, Filter, User, Calendar, FileText, AlertTriangle } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
@@ -63,16 +64,68 @@ const ApplicationsManagement: React.FC = () => {
 
   const handleAction = async (id: string, newStatus: Application['status'], reviewNotes?: string) => {
     try {
+      // Update application status in database
       await updateApplicationStatus(id, newStatus);
       setApplications(applications.map(a => 
         a.id === id ? { ...a, status: newStatus, notes: reviewNotes } : a
       ));
       
-      addNotification({
-        type: 'success',
-        title: 'Application Updated',
-        message: `Application has been ${newStatus}.`
-      });
+      // Send email notification to student
+      const application = applications.find(a => a.id === id);
+      if (application) {
+        const student = students[application.studentId];
+        const course = courses.find(c => c.code === application.courseCode);
+        
+        if (student && course) {
+          try {
+            let emailSent = false;
+            
+            if (newStatus === 'approved') {
+              emailSent = await emailService.sendApplicationApprovedNotification(
+                student.email,
+                `${student.firstName} ${student.lastName}`,
+                course.name,
+                application.id
+              );
+            } else if (newStatus === 'rejected') {
+              emailSent = await emailService.sendApplicationRejectedNotification(
+                student.email,
+                `${student.firstName} ${student.lastName}`,
+                course.name,
+                application.id,
+                reviewNotes
+              );
+            }
+            
+            if (emailSent) {
+              addNotification({
+                type: 'success',
+                title: 'Application Updated',
+                message: `Application has been ${newStatus} and student has been notified via email.`
+              });
+            } else {
+              addNotification({
+                type: 'warning',
+                title: 'Application Updated',
+                message: `Application has been ${newStatus}, but email notification failed to send.`
+              });
+            }
+          } catch (emailError) {
+            console.error('Email notification error:', emailError);
+            addNotification({
+              type: 'warning',
+              title: 'Application Updated',
+              message: `Application has been ${newStatus}, but email notification failed to send.`
+            });
+          }
+        } else {
+          addNotification({
+            type: 'success',
+            title: 'Application Updated',
+            message: `Application has been ${newStatus}.`
+          });
+        }
+      }
       
       setSelectedApp(null);
       setNotes('');
@@ -371,6 +424,21 @@ const ApplicationsManagement: React.FC = () => {
               />
             </div>
             
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-blue-700">
+                    <strong>Email Notification:</strong> The student will automatically receive an email notification about the application status update.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="flex space-x-3">
               <button
                 onClick={() => handleAction(selectedApp.id, 'approved', notes)}

@@ -9,6 +9,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { Application, Student, Subject } from '../../types';
+import EmailTestPanel from '../admin/EmailTestPanel';
 import { getAllApplications, getAllSubjects, getStudents } from '../../services/database';
 import { useAuth } from '../../context/AuthContext';
 import { SkeletonDashboard } from '../common/Skeleton';
@@ -223,6 +224,11 @@ const AdminDashboard: React.FC = () => {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Email Service Test Panel */}
+      <div className="mt-6">
+        <EmailTestPanel />
       </div>
     </div>
   );

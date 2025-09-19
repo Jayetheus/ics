@@ -97,6 +97,8 @@ const StudentDashboard: React.FC = () => {
 
   // Check registration status
   const hasApprovedApplication = applications.some(app => app.status === 'approved');
+  const hasPendingApplication = applications.some(app => app.status === 'pending');
+  const hasRejectedApplication = applications.some(app => app.status === 'rejected');
   const hasActiveRegistration = registration && registration.year;
   const needsApplication = !hasApprovedApplication && !hasActiveRegistration;
   const canRegister = hasApprovedApplication && !hasActiveRegistration;
@@ -187,7 +189,7 @@ const StudentDashboard: React.FC = () => {
         </p>
       </div>
 
-      {/* Registration Status Alert */}
+      {/* Registration Status Alerts */}
       {hasApprovedApplication && !hasActiveRegistration && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
@@ -204,6 +206,34 @@ const StudentDashboard: React.FC = () => {
             >
               Complete Registration
             </button>
+          </div>
+        </div>
+      )}
+
+      {hasPendingApplication && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <Clock className="h-5 w-5 text-yellow-600 mr-3" />
+            <div>
+              <h3 className="font-medium text-yellow-900">Application Under Review</h3>
+              <p className="text-sm text-yellow-700">
+                Your application is being reviewed. You will receive an email notification once a decision is made.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hasRejectedApplication && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertTriangle className="h-5 w-5 text-red-600 mr-3" />
+            <div>
+              <h3 className="font-medium text-red-900">Application Not Approved</h3>
+              <p className="text-sm text-red-700">
+                Your application was not approved. Please check your email for details and consider applying again.
+              </p>
+            </div>
           </div>
         </div>
       )}
