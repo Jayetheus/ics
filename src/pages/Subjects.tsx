@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BookOpen, Calendar, Award, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getSubjectsByCourse, getStudentById, getResultsByStudent } from '../services/database';
+import { getSubjectsByCourse, getUserById, getResultsByStudent } from '../services/database';
 import { Subject, Result } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
@@ -16,8 +16,8 @@ const Subjects: React.FC = () => {
     const load = async () => {
       if (!currentUser) return;
       try {
-        const student = await getStudentById(currentUser.uid);
-        const courseCode = student?.profile.course
+        const user = await getUserById(currentUser.uid);
+        const courseCode = user?.courseCode;
         
         if (courseCode) {
           const [subs, studentResults] = await Promise.all([

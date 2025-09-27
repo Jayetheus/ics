@@ -77,15 +77,6 @@ const FinalizeRegistration: React.FC = () => {
     try {
       setFinalizing(true);
       await enrollStudentSubjects(currentUser.uid, chosen);
-      await createStudent({
-        ...currentUser,
-        profile: {
-          ...currentUser.profile,
-          status: 'active' as any,
-          year: year,
-          course: approvedApp.courseCode
-        }
-      });
       await updateFinancesByStudentId(currentUser.uid, updatedFinances);
 
       addNotification({

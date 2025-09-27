@@ -9,18 +9,80 @@ import {
   query, 
   where, 
   orderBy,
-  arrayUnion, 
   Timestamp, 
   setDoc
 } from 'firebase/firestore';
-import { auth, db, secondaryAuth } from './firebase';
-import { Student, Course, Result, Timetable, Payment, Ticket, Asset, Application, Subject } from '../types';
+import { db, secondaryAuth } from './firebase';
+import { Student, Course, Result, Timetable, Payment, Ticket, Asset, Application, Subject, AttendanceSession, AttendanceRecord } from '../types';
 import type { College, Lecturer, User } from '../types';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 
-// @section: Students
-export const createStudent = async (studentData: any) => {
+// @section: Users (Unified User Management)
+export const createUser = async (userData: Partial<User>, password: string): Promise<User> => {
+  // Create Firebase Auth user
+    const authUser = await createUserWithEmailAndPassword(
+      secondaryAuth, 
+      userData.email!, 
+      password
+    );
+
+
+  const docRef = await addDoc(collection(db, 'users'), {
+    uid: authUser.user.uid,
+    firstName: userData.firstName || '',
+    lastName: userData.lastName || '',
+    email: userData.email || '',
+    role: userData.role || 'student',
+    status: 'active',
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+    ...userData
+  });
   
+  return {
+    uid: docRef.id,
+    firstName: userData.firstName || '',
+    lastName: userData.lastName || '',
+    email: userData.email || '',
+    role: userData.role || 'student',
+    status: 'active',
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+    ...userData
+  } as User;
+};
+
+export const getUsers = async (): Promise<User[]> => {
+  const querySnapshot = await getDocs(collection(db, 'users'));
+  return querySnapshot.docs.map(docSnap => ({
+    uid: docSnap.id,
+    ...docSnap.data(),
+  } as User));
+};
+
+export const getUserById = async (uid: string): Promise<User | null> => {
+  const docRef = doc(db, 'users', uid);
+  const docSnap = await getDoc(docRef);
+  return docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } as User : null;
+};
+
+export const updateUser = async (uid: string, data: Partial<User>): Promise<User> => {
+  const docRef = doc(db, 'users', uid);
+  await updateDoc(docRef, {
+    ...data,
+    updatedAt: Timestamp.now(),
+  });
+  
+  const updatedDoc = await getDoc(docRef);
+  return { uid: updatedDoc.id, ...updatedDoc.data() } as User;
+};
+
+export const deleteUser = async (uid: string): Promise<void> => {
+  await deleteDoc(doc(db, 'users', uid));
+};
+
+// Legacy Student functions for backward compatibility
+export const createStudent = async (studentData: any) => {
   const data = {...studentData, displayName: `${studentData.profile.firstName} ${studentData.profile.lastName}`}
   await setDoc(doc(db, 'students', data.uid), {
     ...data,
@@ -30,14 +92,16 @@ export const createStudent = async (studentData: any) => {
 };
 
 export const getStudents = async () => {
-  const querySnapshot = await getDocs(collection(db, 'students'));
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+  const q = query(collection(db, "users"), where("role", "==", "student"));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({...doc.data() } as User)) as User[];
 };
 
 export const getStudentById = async (id: string) => {
-  const docRef = doc(db, 'students', id);
-  const docSnap = await getDoc(docRef);
-  return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Student : null;
+  const q = query(collection(db,"users"), where("uid", "==", id));
+
+  const docSnap = await getDocs(q);
+  return docSnap.docs[0].exists() ?{...docSnap.docs[0].data()} as User : null;
 };
 
 export const updateStudent = async (id: string, data: Partial<Student>) => {
@@ -137,6 +201,63 @@ export const getCourseByCode = async (code: any): Promise<Course>=>{
 
   return {...snapShot.data() as Course }
 }
+
+// @section: Attendance
+export const createAttendanceSession = async (sessionData: Omit<AttendanceSession, 'id' | 'createdAt' | 'expiresAt'>) => {
+  const docRef = await addDoc(collection(db, 'attendanceSessions'), {
+    ...sessionData,
+    createdAt: Timestamp.now(),
+    expiresAt: Timestamp.fromDate(new Date(Date.now() + 2 * 60 * 60 * 1000)) // 2 hours from now
+  });
+  return docRef.id;
+};
+
+export const getAttendanceSessionsByLecturer = async (lecturerId: string) => {
+  const q = query(collection(db, 'attendanceSessions'), where('lecturerId', '==', lecturerId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceSession));
+};
+
+export const getActiveAttendanceSessions = async () => {
+  const q = query(collection(db, 'attendanceSessions'), where('isActive', '==', true));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceSession));
+};
+
+export const updateAttendanceSession = async (sessionId: string, data: Partial<AttendanceSession>) => {
+  const docRef = doc(db, 'attendanceSessions', sessionId);
+  await updateDoc(docRef, data);
+};
+
+export const createAttendanceRecord = async (recordData: Omit<AttendanceRecord, 'id' | 'timestamp'>) => {
+  const docRef = await addDoc(collection(db, 'attendanceRecords'), {
+    ...recordData,
+    timestamp: Timestamp.now()
+  });
+  return docRef.id;
+};
+
+export const getAttendanceRecordsBySession = async (sessionId: string) => {
+  const q = query(collection(db, 'attendanceRecords'), where('sessionId', '==', sessionId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
+};
+
+export const getAttendanceRecordsByStudent = async (studentId: string) => {
+  const q = query(collection(db, 'attendanceRecords'), where('studentId', '==', studentId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
+};
+
+export const checkStudentAttendance = async (sessionId: string, studentId: string | null) => {
+  const q = query(
+    collection(db, 'attendanceRecords'), 
+    where('sessionId', '==', sessionId),
+    where('studentId', '==', studentId)
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.length > 0;
+};
 
 
 // @section: Payments
@@ -485,7 +606,7 @@ export const getAssetsByUploader = async (uploadedBy: string) => {
 
 // Simple enrolled subjects storage per student
 export const enrollStudentSubjects = async (studentId: string, subjectCodes: string[]) => {
-  const ref = doc(db, 'students', studentId);
+  const ref = doc(db, 'users', studentId);
   await setDoc(ref, { enrolledSubjects: subjectCodes });
 };
 
@@ -517,84 +638,65 @@ export const populateSubjectsForCourse = async (courseName: string) => {
 //THESE ARE MADE BY ME
 
 // @section: ADMIN METHODS
-// Get all users from Firestore
-export async function getUsers(): Promise<User[]> {
-  const snapshot = await getDocs(collection(db, 'users'));
-  return snapshot.docs.map(docSnap => ({
-    uid: docSnap.id,
-    ...docSnap.data(),
-  } as User));
-}
-
-// Create a new user in Firestore
-export async function createUser(data: Partial<User>): Promise<User> {
-  const docRef = await addDoc(collection(db, 'users'), {
-    firstName: data.firstName || '',
-    lastName: data.lastName || '',
-    email: data.email || '',
-    role: data.role || 'student',
-  });
-  return {
-    uid: docRef.id,
-    firstName: data.firstName || '',
-    lastName: data.lastName || '',
-    email: data.email || '',
-    role: data.role || 'student',
-  };
-}
-
-// Update an existing user in Firestore
-export async function updateUser(uid: string, data: Partial<User>): Promise<User> {
-  const userDoc = doc(db, 'users', uid);
-  await updateDoc(userDoc, data);
-  const updatedSnap = await getDocs(collection(db, 'users'));
-  const updatedUser = updatedSnap.docs.find(d => d.id === uid);
-  if (!updatedUser) throw new Error('User not found');
-  return {
-    uid,
-    ...updatedUser.data(),
-  } as User;
-}
-
-// Delete a user from Firestore
-export async function deleteUser(uid: string): Promise<void> {
-  await deleteDoc(doc(db, 'users', uid));
-}
+// These functions are now defined above in the unified user management section
 
 
-// Create lecturer user
-export const createLecturer = async (lecturerData: Lecturer) => {
+// Create lecturer user (using unified User interface)
+export const createLecturer = async (lecturerData: Partial<User>, password: string) => {
+  try {
+    
+    // Create Firebase Auth user
+    const authUser = await createUserWithEmailAndPassword(
+      secondaryAuth, 
+      lecturerData.email!, 
+      password
+    );
 
-  let data = lecturerData;
-  await createUserWithEmailAndPassword(secondaryAuth,lecturerData.email, "123456").then(resp=>{
-    data = { 
-      ...lecturerData,
-      uid: resp.user.uid
-    }
+    // Create user document with lecturer-specific data
+    const userData: Partial<User> = {
+      uid: authUser.user.uid,
+      firstName: lecturerData.firstName || '',
+      lastName: lecturerData.lastName || '',
+      email: lecturerData.email || '',
+      role: 'lecturer',
+      status: 'active',
+      staffNumber: lecturerData.staffNumber || '',
+      department: lecturerData.department || '',
+      collegeId: lecturerData.collegeId || '',
+      hireDate: lecturerData.hireDate || new Date().toISOString().split('T')[0],
+      phone: lecturerData.phone || '',
+      address: lecturerData.address || '',
+      qualifications: lecturerData.qualifications || '',
+      subjects: [],
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    };
 
-  })
-
-  await setDoc(doc(db, 'lecturers', data.uid), {
-    ...lecturerData,
-    role: "lecturer",
-    hireDate: lecturerData.hireDate || new Date().toISOString().split('T')[0],
-    status: 'active',
-    subjects: []
-  });
-  return true;
+    await setDoc(doc(db, 'users', authUser.user.uid), userData);
+    return true;
+  } catch (error) {
+    console.error('Error creating lecturer:', error);
+    throw error;
+  }
 };
 
-// Get all lecturers
-export const getLecturers = async (): Promise<Lecturer[]> => {
-  const querySnapshot = await getDocs(collection(db, 'lecturers'));
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Lecturer));
+// Get all lecturers (from unified users collection)
+export const getLecturers = async (): Promise<User[]> => {
+  const q = query(collection(db, 'users'), where('role', '==', 'lecturer'));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
 };
 
 // Get lecturer by ID
-export const getLecturerById = async (id: string): Promise<Lecturer | null> => {
-  const docRef = doc(db, 'lecturers', id);
+export const getLecturerById = async (uid: string): Promise<User | null> => {
+  const docRef = doc(db, 'users', uid);
   const docSnap = await getDoc(docRef);
-  return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as unknown as Lecturer : null;
+  if (!docSnap.exists()) return null;
+  
+  const userData = docSnap.data();
+  if (userData.role !== 'lecturer') return null;
+  
+  return { uid: docSnap.id, ...userData } as User;
 };
 
 // Update lecturer

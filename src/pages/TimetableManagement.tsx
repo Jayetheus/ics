@@ -70,7 +70,7 @@ const TimetableManagement: React.FC = () => {
           getLecturers()
         ]);
         setCourses(coursesData);
-        setLecturers(lecturersData);
+        setLecturers(lecturersData as any);
       } catch (error) {
         console.error('Error fetching data:', error);
         addNotification({

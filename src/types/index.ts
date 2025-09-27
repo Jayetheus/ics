@@ -1,16 +1,38 @@
 import { Timestamp } from "firebase/firestore";
 
+export type UserRole = 'student' | 'lecturer' | 'admin' | 'finance';
+
 export interface User {
   uid: string;
   email: string;
   firstName: string;
   lastName: string;
   role: UserRole;
-  profile?: UserProfile;
+  status: 'active' | 'inactive' | 'suspended';
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  // Role-specific fields
+  studentNumber?: string;
+  staffNumber?: string;
+  courseCode?: string;
+  year?: number;
+  department?: string;
+  collegeId?: string;
+  hireDate?: string;
+  registrationDate?: string;
+  examNumber?: string;
+  phone?: string;
+  address?: string;
+  idNumber?: string;
+  dateOfBirth?: string;
+  photoUrl?: string;
+  qualifications?: string;
+  subjects?: string[]; // Array of subject IDs for lecturers
+  enrolledSubjects?: string[]; // Array of subject IDs for students
+  results?: any[]; // For students
 }
 
-export type UserRole = 'student' | 'lecturer' | 'admin' | 'finance';
-
+// Legacy interfaces for backward compatibility - will be deprecated
 export interface UserProfile {
   firstName: string;
   lastName: string;
@@ -40,6 +62,7 @@ export interface Student {
   results: any[];
 }
 
+// Lecturer is now just a User with role='lecturer' - keeping for backward compatibility
 export interface Lecturer {
   uid: string;
   staffNumber: string;
@@ -136,6 +159,34 @@ export interface Application {
   notes?: string;
 }
 
+export interface AttendanceSession {
+  id: string;
+  lecturerId: string;
+  lecturerName: string;
+  subjectCode: string;
+  subjectName: string;
+  courseCode: string;
+  venue: string;
+  date: string; // YYYY-MM-DD format
+  startTime: string;
+  endTime: string;
+  qrCode: string; // Generated QR code data
+  isActive: boolean;
+  createdAt: Timestamp;
+  expiresAt: Timestamp;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  sessionId: string;
+  studentId: string;
+  studentName: string;
+  studentNumber: string;
+  timestamp: Timestamp;
+  status: 'present' | 'late' | 'absent';
+  notes?: string;
+}
+
 export interface Registration {
   id: string;
   studentId: string;
@@ -172,8 +223,11 @@ export interface Ticket {
 export interface Asset {
   id: string;
   name: string;
+  originalName: string;
   type: string;
-  url: string;
+  url?: string; // Optional for backward compatibility
+  fileId?: string; // Appwrite file ID for storage operations
+  bucketId?: string; // Appwrite bucket ID
   uploadedBy: string;
   uploadedAt: string;
   size: number;

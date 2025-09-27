@@ -161,7 +161,7 @@ const Register: React.FC = () => {
     }
 
     if (formData.examNumber.length !== 10) {
-      return setError('Password must be at least 10 numbers');
+      return setError('Exam Number must be at least 10 numbers');
     }
 
     try {
