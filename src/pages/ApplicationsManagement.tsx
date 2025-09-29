@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { getAllApplications, updateApplicationStatus, getCourses, getStudentById } from '../services/database';
+import { getAllApplications, updateApplicationStatus, getCourses, getStudentById, getStudents } from '../services/database';
 import { emailService } from '../services/emailService';
-import { Application, Course, Student } from '../types';
-import { CheckCircle, X, Search, Filter, User, Calendar, FileText, AlertTriangle } from 'lucide-react';
+import { Application, Course, Student, User } from '../types';
+import { CheckCircle, X, Search, Filter, User as UserIcon, Calendar, FileText, AlertTriangle } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const ApplicationsManagement: React.FC = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [students, setStudents] = useState<Record<string, Student>>({});
+  const [students, setStudents] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<'all' | Application['status']>('all');
@@ -20,23 +20,15 @@ const ApplicationsManagement: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const [apps, crs] = await Promise.all([
+        const [apps, crs, studentData] = await Promise.all([
           getAllApplications(),
           getCourses(),
+          getStudents(),
         ]);
+
+        console.log(studentData)
         setApplications(apps);
         setCourses(crs);
-
-        // Load student details for each application
-        const studentData: Record<string, Student> = {};
-        for (const app of apps) {
-          if (!studentData[app.studentId]) {
-            const student = await getStudentById(app.studentId);
-            if (student) {
-              studentData[app.studentId] = student;
-            }
-          }
-        }
         setStudents(studentData);
       } catch (error) {
         console.error('Error loading data:', error);
@@ -55,7 +47,7 @@ const ApplicationsManagement: React.FC = () => {
   const courseName = (code: string) => courses.find(c => c.code === code)?.name || code;
 
   const filtered = applications.filter(a => {
-    const student = students[a.studentId];
+    const student = students.find(std => std.uid === a.studentId);
     const matchS = status === 'all' || a.status === status;
     const matchQ = a.courseCode.toLowerCase().includes(search.toLowerCase()) ||
                   (student && `${student.firstName} ${student.lastName}`.toLowerCase().includes(search.toLowerCase()));
@@ -73,7 +65,7 @@ const ApplicationsManagement: React.FC = () => {
       // Send email notification to student
       const application = applications.find(a => a.id === id);
       if (application) {
-        const student = students[application.studentId];
+        const student = students.find(std => std.uid === application.studentId);
         const course = courses.find(c => c.code === application.courseCode);
         
         if (student && course) {
@@ -284,13 +276,13 @@ const ApplicationsManagement: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filtered.map(a => {
-                const student = students[a.studentId];
+                const student = students.find(std => std.uid === a.studentId);
                 return (
                   <tr key={a.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="p-2 bg-blue-100 rounded-full">
-                          <User className="h-4 w-4 text-blue-600" />
+                          <UserIcon className="h-4 w-4 text-blue-600" />
                         </div>
                         <div className="ml-3">
                           <div className="text-sm font-medium text-gray-900">
@@ -375,15 +367,15 @@ const ApplicationsManagement: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Student</label>
                   <p className="text-gray-900">
-                    {students[selectedApp.studentId] 
-                      ? `${students[selectedApp.studentId].firstName} ${students[selectedApp.studentId].lastName}`
+                    {students.find(std => std.uid === selectedApp.studentId)
+                      ? `${students.find(std => std.uid === selectedApp.studentId)?.firstName} ${students.find(std => std.uid === selectedApp.studentId)?.lastName}`
                       : 'Unknown Student'}
                   </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Email</label>
                   <p className="text-gray-900">
-                    {students[selectedApp.studentId]?.email || 'N/A'}
+                    {students.find(std => std.uid === selectedApp.studentId)?.email || 'N/A'}
                   </p>
                 </div>
               </div>

@@ -1,28 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Calendar, Upload, Save, Edit } from 'lucide-react';
+import { 
+  User, Mail, Phone, MapPin, Calendar, Save, Edit, 
+  FileText, Download, Trash2, Eye, Image, FolderOpen, Plus
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { COLLEGES, COURSES } from '../data/constants';
 import FileUpload from '../components/common/FileUpload';
+import { getAssetsByUploader, deleteAsset } from '../services/appwriteDatabase';
+import { Asset } from '../types';
+import { useNotification } from '../context/NotificationContext';
 
 const Profile: React.FC = () => {
   const { currentUser } = useAuth();
+  const { addNotification } = useNotification();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
-    firstName: currentUser?.profile?.firstName || '',
-    lastName: currentUser?.profile?.lastName || '',
-    college: currentUser?.profile?.college || '',
-    phone: currentUser?.profile?.phone || '',
-    address: currentUser?.profile?.address || '',
-    dateOfBirth: currentUser?.profile?.dateOfBirth || '',
-    photoUrl: currentUser?.profile?.photoUrl || '',
-    course: currentUser?.profile?.course || '',
-    year: currentUser?.profile?.year || 1,
-    studentNumber: currentUser?.profile?.studentNumber || '',
-    staffNumber: currentUser?.profile?.staffNumber || '',
+    firstName: currentUser?.firstName || '',
+    lastName: currentUser?.lastName || '',
+    college: currentUser?.collegeId || '',
+    phone: currentUser?.phone || '',
+    address: currentUser?.address || '',
+    dateOfBirth: currentUser?.dateOfBirth || '',
+    photoUrl: currentUser?.photoUrl || '',
+    course: currentUser?.courseCode || '',
+    year: currentUser?.year || 1,
+    studentNumber: currentUser?.studentNumber || '',
+    staffNumber: currentUser?.staffNumber || '',
   });
+
+  // Document management states
+  const [documents, setDocuments] = useState<Asset[]>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
 
   const handleSave = async () => {
     if (!currentUser) return;
@@ -31,7 +43,8 @@ const Profile: React.FC = () => {
       setLoading(true);
       const userRef = doc(db, 'users', currentUser.uid);
       await updateDoc(userRef, {
-        profile: profileData
+        ...profileData,
+        updatedAt: new Date()
       });
       setEditing(false);
       alert('Profile updated successfully!');
@@ -45,6 +58,110 @@ const Profile: React.FC = () => {
 
   const handlePhotoUpload = (fileData: any) => {
     setProfileData({ ...profileData, photoUrl: fileData.url });
+  };
+
+  // Load user documents
+  useEffect(() => {
+    const loadDocuments = async () => {
+      if (!currentUser) return;
+      
+      setLoadingDocuments(true);
+      try {
+        const userDocuments = await getAssetsByUploader(currentUser.uid);
+        setDocuments(userDocuments);
+      } catch (error) {
+        console.error('Error loading documents:', error);
+        addNotification({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to load documents'
+        });
+      } finally {
+        setLoadingDocuments(false);
+      }
+    };
+
+    loadDocuments();
+  }, [currentUser, addNotification]);
+
+  // Document management functions
+  const handleDocumentUpload = async (fileData: any) => {
+    if (!currentUser) return;
+
+    try {
+      const assetData = {
+        name: fileData.name,
+        type: fileData.type,
+        url: fileData.url,
+        uploadedBy: currentUser.uid,
+        size: fileData.size,
+        category: (fileData.type.startsWith('image/') ? 'image' : 'document') as 'image' | 'document' | 'video' | 'other'
+      };
+
+      await createAsset(assetData);
+      
+      // Refresh documents list
+      const userDocuments = await getAssetsByUploader(currentUser.uid);
+      setDocuments(userDocuments);
+      
+      addNotification({
+        type: 'success',
+        title: 'Document Uploaded',
+        message: 'Document has been successfully uploaded'
+      });
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      addNotification({
+        type: 'error',
+        title: 'Upload Failed',
+        message: 'Failed to upload document'
+      });
+    }
+  };
+
+  const handleDocumentDelete = async (documentId: string) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
+
+    try {
+      await deleteAsset(documentId);
+      setDocuments(documents.filter(doc => doc.id !== documentId));
+      
+      addNotification({
+        type: 'success',
+        title: 'Document Deleted',
+        message: 'Document has been successfully deleted'
+      });
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      addNotification({
+        type: 'error',
+        title: 'Delete Failed',
+        message: 'Failed to delete document'
+      });
+    }
+  };
+
+  const handleDocumentDownload = (url: string, name: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    link.target = '_blank';
+    link.click();
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('image/')) {
+      return <Image className="h-6 w-6 text-blue-600" />;
+    }
+    return <FileText className="h-6 w-6 text-red-600" />;
   };
 
   return (
@@ -324,6 +441,103 @@ const Profile: React.FC = () => {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Documents Section */}
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold text-gray-900">My Documents</h2>
+          <button
+            onClick={() => setShowDocumentUpload(!showDocumentUpload)}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Upload Document
+          </button>
+        </div>
+
+        {/* Document Upload Form */}
+        {showDocumentUpload && (
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-900 mb-3">Upload New Document</h3>
+            <FileUpload
+              onUpload={handleDocumentUpload}
+              accept="image/*,.pdf,.doc,.docx,.txt"
+              maxSize={10}
+              folder={`user-documents/${currentUser?.uid}`}
+            />
+          </div>
+        )}
+
+        {/* Documents List */}
+        {loadingDocuments ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        ) : documents.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {documents.map((document) => (
+              <div key={document.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center">
+                    {getFileIcon(document.type)}
+                    <div className="ml-3 flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {document.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {formatFileSize(document.size)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {document.type.startsWith('image/') && (
+                  <div className="mb-3">
+                    <img
+                      src={document.url}
+                      alt={document.name}
+                      className="w-full h-24 object-cover rounded-md"
+                    />
+                  </div>
+                )}
+
+                <div className="text-xs text-gray-500 mb-3">
+                  Uploaded: {new Date(document.uploadedAt).toLocaleDateString()}
+                </div>
+
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => window.open(document.url, '_blank')}
+                    className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    View
+                  </button>
+                  <button
+                    onClick={() => handleDocumentDownload(document.url, document.name)}
+                    className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    <Download className="h-3 w-3 mr-1" />
+                    Download
+                  </button>
+                  <button
+                    onClick={() => handleDocumentDelete(document.id)}
+                    className="px-3 py-2 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 transition-colors"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No documents found</h3>
+            <p className="text-gray-600">You haven't uploaded any documents yet.</p>
+          </div>
+        )}
       </div>
     </div>
   );

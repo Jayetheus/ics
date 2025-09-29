@@ -8,9 +8,9 @@ import {
   Settings,
   Calendar
 } from 'lucide-react';
-import { Application, Student, Subject } from '../../types';
+import { Application, User, Subject } from '../../types';
 import EmailTestPanel from '../admin/EmailTestPanel';
-import { getAllApplications, getAllSubjects, getStudents } from '../../services/database';
+import { getAllApplications, getAllSubjects, getUsers } from '../../services/database';
 import { useAuth } from '../../context/AuthContext';
 import { SkeletonDashboard } from '../common/Skeleton';
 import { useNotification } from '../../context/NotificationContext';
@@ -22,7 +22,7 @@ const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<User[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
 
@@ -30,12 +30,14 @@ const AdminDashboard: React.FC = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const [studentsData, subjectData, applicationsData] = await Promise.all([
-          getStudents(),
+        const [usersData, subjectData, applicationsData] = await Promise.all([
+          getUsers(),
           getAllSubjects(),
           getAllApplications()
         ]);
 
+        // Filter students from all users
+        const studentsData = usersData.filter(user => user.role === 'student');
         setStudents(studentsData);
         setSubjects(subjectData);
         setApplications(applicationsData.filter(app => app.status == 'pending'));
@@ -149,9 +151,9 @@ const AdminDashboard: React.FC = () => {
               {applications.slice(0, 3).map((item) => (
                 <div key={item.id} className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">{students.filter(student => student.id === item.studentId)[0]?.firstName}</p>
+                    <p className="font-medium text-gray-900">{students.filter(student => student.uid === item.studentId)[0]?.firstName}</p>
                     <p className="text-sm text-gray-600">
-                      {item.courseCode} - {students.filter(student => student.id === item.studentId)[0]?.firstName} {students.filter(student => student.id === item.studentId)[0]?.lastName}
+                      {item.courseCode} - {students.filter(student => student.uid === item.studentId)[0]?.firstName} {students.filter(student => student.uid === item.studentId)[0]?.lastName}
                     </p>
                     <p className="text-xs text-gray-500">{item.createdAt.toDate().toLocaleDateString()}</p>
                   </div>

@@ -39,7 +39,7 @@ const CourseManagement: React.FC = () => {
   const fetchLecturers = async () => {
     try {
       const lecturersData = await getLecturers();
-      setLecturers(lecturersData);
+      setLecturers(lecturersData as any);
     } catch (error) {
       addNotification({
         type: 'error',
@@ -283,7 +283,7 @@ const CourseManagement: React.FC = () => {
                 <input
                   type="number"
                   min="1"
-                  max="32"
+                  max="500"
                   value={formData.credits}
                   onChange={(e) => setFormData({ ...formData, credits: parseInt(e.target.value) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -316,7 +316,7 @@ const CourseManagement: React.FC = () => {
                 >
                   <option value="">Select Lecturer</option>
                   {lecturers.map(lecturer => (
-                    <option key={lecturer.uid} value={lecturer.uid}>{lecturer.lastName} {lecturer.lastName}</option>
+                    <option key={lecturer.uid} value={lecturer.uid}>{lecturer.firstName} {lecturer.lastName}</option>
                   ))}
                 </select>
               </div>
@@ -452,6 +452,9 @@ const CourseManagement: React.FC = () => {
                   Course
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  College
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Lecturer
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -478,7 +481,7 @@ const CourseManagement: React.FC = () => {
                     {colleges.find(c => c.id === course.collegeId)?.name || 'Unknown'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {course.lecturer}
+                    {lecturers.find(l => l.uid === course.lecturer)?.firstName} {lecturers.find(l => l.uid === course.lecturer)?.lastName}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {course.department}

@@ -71,7 +71,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (email: string, password: string, role: UserRole, additionalData: any) => {
     const { user } = await createUserWithEmailAndPassword(auth, email, password);
-
     const userData = {
       email,
       role,
@@ -79,6 +78,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...additionalData,
       createdAt: new Date().toISOString(),
     };
+
+    if(role === 'student'){
+
+    }
 
     await setDoc(doc(db, 'users', user.uid), userData);
   };
