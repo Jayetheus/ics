@@ -6,7 +6,7 @@ import {
   signOut,
   onAuthStateChanged
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import { User, UserRole } from '../types';
 
@@ -34,9 +34,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) {
+      console.error('Firebase auth not initialized');
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         try {
+          if (!db) {
+            console.error('Firestore not initialized');
+            setCurrentUser(null);
+            return;
+          }
+          
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data();
@@ -51,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error) {
           console.error('Error fetching user data:', error);
           setCurrentUser(null);
-        } finally{
+        } finally {
           setLoading(false);
         }
       } else {
@@ -61,32 +73,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
     });
 
-    return unsubscribe
+    return unsubscribe;
   }, []);
 
 
   const login = async (email: string, password: string) => {
+    if (!auth) {
+      throw new Error('Firebase auth not initialized');
+    }
     await signInWithEmailAndPassword(auth, email, password);
   };
 
   const register = async (email: string, password: string, role: UserRole, additionalData: any) => {
+    if (!auth || !db) {
+      throw new Error('Firebase not initialized');
+    }
+    
     const { user } = await createUserWithEmailAndPassword(auth, email, password);
     const userData = {
       email,
       role,
       uid: user.uid,
+      status: 'active',
       ...additionalData,
-      createdAt: new Date().toISOString(),
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
     };
-
-    if(role === 'student'){
-
-    }
 
     await setDoc(doc(db, 'users', user.uid), userData);
   };
 
   const logout = async () => {
+    if (!auth) {
+      throw new Error('Firebase auth not initialized');
+    }
     await signOut(auth);
   };
 

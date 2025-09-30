@@ -10,7 +10,8 @@ import {
   Search,
   Filter,
   Calendar,
-  Receipt
+  Receipt,
+  Plus
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
@@ -20,16 +21,22 @@ import {
   createPayment,
   getStudentRegistration
 } from '../services/database';
+import { getOutstandingBalance, getPaymentHistory } from '../services/paymentService';
 import { Payment } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import PaymentModal from '../components/payment/PaymentModal';
 
 const StudentFinance: React.FC = () => {
   const { currentUser } = useAuth();
   const { addNotification } = useNotification();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [financeData, setFinanceData] = useState<any>({ records: [], total: 0 });
+  const [outstandingBalance, setOutstandingBalance] = useState<any>(null);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPaymentType, setSelectedPaymentType] = useState<'registration' | 'tuition' | 'accommodation' | 'other'>('tuition');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [registration, setRegistration] = useState<any>(null);
@@ -46,15 +53,20 @@ const StudentFinance: React.FC = () => {
       if (!currentUser) return;
 
       try {
-        const [paymentsData, financeData, registrationData] = await Promise.all([
+        setLoading(true);
+        const [paymentsData, financeData, registrationData, balanceData, historyData] = await Promise.all([
           getPaymentsByStudent(currentUser.uid),
           getFinancesByStudentId(currentUser.uid),
-          getStudentRegistration(currentUser.uid)
+          getStudentRegistration(currentUser.uid),
+          getOutstandingBalance(currentUser.uid),
+          getPaymentHistory(currentUser.uid)
         ]);
         
         setPayments(paymentsData);
         setFinanceData(financeData);
         setRegistration(registrationData);
+        setOutstandingBalance(balanceData);
+        setPaymentHistory(historyData);
       } catch (error) {
         console.error('Error fetching finance data:', error);
         addNotification({
@@ -111,6 +123,40 @@ const StudentFinance: React.FC = () => {
         title: 'Error',
         message: 'Failed to submit payment'
       });
+    }
+  };
+
+  const handleStripePayment = (paymentType: 'registration' | 'tuition' | 'accommodation' | 'other') => {
+    if (!outstandingBalance) return;
+    
+    const amount = outstandingBalance.breakdown[paymentType];
+    if (amount <= 0) {
+      addNotification({
+        type: 'info',
+        title: 'No Outstanding Balance',
+        message: `No outstanding ${paymentType} fees to pay`
+      });
+      return;
+    }
+
+    setSelectedPaymentType(paymentType);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = async (amount: number) => {
+    // Refresh all data after successful payment
+    try {
+      const [paymentsData, balanceData, historyData] = await Promise.all([
+        getPaymentsByStudent(currentUser?.uid || ''),
+        getOutstandingBalance(currentUser?.uid || ''),
+        getPaymentHistory(currentUser?.uid || '')
+      ]);
+      
+      setPayments(paymentsData);
+      setOutstandingBalance(balanceData);
+      setPaymentHistory(historyData);
+    } catch (error) {
+      console.error('Error refreshing data after payment:', error);
     }
   };
 
@@ -196,6 +242,39 @@ const StudentFinance: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Outstanding Balance */}
+      {outstandingBalance && (
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Outstanding Balance</h2>
+            <span className="text-2xl font-bold text-red-600">
+              R{outstandingBalance.totalOutstanding.toLocaleString()}
+            </span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            {Object.entries(outstandingBalance.breakdown).map(([type, amount]) => (
+              <div key={type} className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium text-gray-900 capitalize">{type}</h3>
+                    <p className="text-2xl font-bold text-gray-900">R{amount.toLocaleString()}</p>
+                  </div>
+                  {amount > 0 && (
+                    <button
+                      onClick={() => handleStripePayment(type as any)}
+                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      Pay Now
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Financial Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -430,6 +509,19 @@ const StudentFinance: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && outstandingBalance && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          amount={outstandingBalance.breakdown[selectedPaymentType]}
+          description={`${selectedPaymentType.charAt(0).toUpperCase() + selectedPaymentType.slice(1)} Payment`}
+          studentId={currentUser?.uid || ''}
+          paymentType={selectedPaymentType}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 };

@@ -25,7 +25,9 @@ import {
   createResult,
   updateResult,
   deleteResult,
-  getAttendanceRecordsBySession
+  getAttendanceRecordsBySession,
+  getStudentsBySubject,
+  getStudentsByCourse
 } from '../services/database';
 import { Subject, Course, User, Result, AttendanceRecord } from '../types';
 import { GRADE_SCALE } from '../data/constants';
@@ -69,6 +71,7 @@ const ResultsEntry: React.FC = () => {
           getCourses(),
           getUsers()
         ]);
+        
         setCourses(coursesData);
         setStudents(usersData.filter(user => user.role === 'student'));
       } catch (error) {
@@ -76,7 +79,7 @@ const ResultsEntry: React.FC = () => {
         addNotification({
           type: 'error',
           title: 'Loading Error',
-          message: 'Failed to load data'
+          message: 'Failed to load data. Please try again.'
         });
       } finally {
         setLoading(false);
@@ -103,13 +106,27 @@ const ResultsEntry: React.FC = () => {
     try {
       const subjectsData = await getSubjectsByCourse(selectedCourse);
       setSubjects(subjectsData);
+      
+      if (subjectsData.length === 0) {
+        addNotification({
+          type: 'info',
+          title: 'No Subjects Found',
+          message: 'No subjects found for the selected course. Please check if subjects are properly configured.'
+        });
+      }
     } catch (error) {
       console.error('Error fetching subjects:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to load subjects for this course'
+      });
     }
   };
 
   const fetchResults = async () => {
     try {
+      if (!currentUser?.uid) return;
       const resultsData = await getResultsByCourse(selectedCourse);
       setResults(resultsData.filter(r => r.subjectCode === selectedSubject));
     } catch (error) {
@@ -118,27 +135,48 @@ const ResultsEntry: React.FC = () => {
   };
 
   const fetchStudentsForSubject = async () => {
-    // Get students enrolled in the selected subject
-    const enrolledStudents = students.filter(student => 
-      student.enrolledSubjects?.includes(selectedSubject)
-    );
-    
-    const studentResultsData: StudentResult[] = enrolledStudents.map(student => {
-      const existingResult = results.find(r => 
-        r.studentId === student.uid && r.subjectCode === selectedSubject
-      );
+    try {
+      // First try to get students by subject enrollment
+      let enrolledStudents = await getStudentsBySubject(selectedSubject);
       
-      return {
-        studentId: student.uid,
-        studentName: `${student.firstName} ${student.lastName}`,
-        studentNumber: student.studentNumber || '',
-        mark: existingResult?.mark || 0,
-        grade: existingResult?.grade || '',
-        status: existingResult ? 'submitted' : 'pending'
-      };
-    });
-    
-    setStudentResults(studentResultsData);
+      // If no students found by subject, get students by course
+      if (enrolledStudents.length === 0) {
+        console.log('No students found by subject, trying by course...');
+        enrolledStudents = await getStudentsByCourse(selectedCourse);
+      }
+      
+      const studentResultsData: StudentResult[] = enrolledStudents.map(student => {
+        const existingResult = results.find(r => 
+          r.studentId === student.uid && r.subjectCode === selectedSubject
+        );
+        
+        return {
+          studentId: student.uid,
+          studentName: `${student.firstName} ${student.lastName}`,
+          studentNumber: student.studentNumber || '',
+          mark: existingResult?.mark || 0,
+          grade: existingResult?.grade || '',
+          status: existingResult ? 'submitted' : 'pending'
+        };
+      });
+      
+      setStudentResults(studentResultsData);
+      
+      if (studentResultsData.length === 0) {
+        addNotification({
+          type: 'info',
+          title: 'No Students Found',
+          message: 'No students found for this subject/course. Please check if students are properly enrolled.'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching students for subject:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to load students for this subject'
+      });
+    }
   };
 
   const calculateGrade = (mark: number): string => {
@@ -213,7 +251,7 @@ const ResultsEntry: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this result?')) return;
 
     try {
-      await deleteResult(resultId);
+      await deleteAppwriteResult(resultId);
       await fetchResults();
       addNotification({
         type: 'success',

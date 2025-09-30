@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BookOpen, Users, Plus, Edit, Trash2, Search, Filter, 
-  CheckCircle, XCircle, AlertCircle, Save, Eye
+  CheckCircle, XCircle, AlertCircle, Save, Eye, X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { 
-  getSubjectsByLecturer, 
-  getStudentsBySubject, 
-  getResultsByLecturer,
+  getSubjectsByCourse, 
+  getCourses, 
+  getUsers,
+  getResultsByCourse,
   createResult,
   updateResult,
-  deleteResult
-} from '../services/appwriteDatabase';
-import { Result, User } from '../types';
+  deleteResult,
+  getStudentsBySubject,
+  getStudentsByCourse
+} from '../services/database';
+import { Result, User, Course } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 interface Subject {
@@ -28,7 +31,9 @@ const ResultsManagement: React.FC = () => {
   const { currentUser } = useAuth();
   const { addNotification } = useNotification();
   
+  const [courses, setCourses] = useState<Course[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [students, setStudents] = useState<User[]>([]);
   const [results, setResults] = useState<Result[]>([]);
@@ -50,8 +55,14 @@ const ResultsManagement: React.FC = () => {
   });
 
   useEffect(() => {
-    loadSubjects();
+    loadCourses();
   }, [currentUser]);
+
+  useEffect(() => {
+    if (selectedCourse) {
+      loadSubjects();
+    }
+  }, [selectedCourse]);
 
   useEffect(() => {
     if (selectedSubject) {
@@ -60,19 +71,46 @@ const ResultsManagement: React.FC = () => {
     }
   }, [selectedSubject]);
 
+  const loadCourses = async () => {
+    if (!currentUser) return;
+
+    try {
+      setLoading(true);
+      const coursesData = await getCourses();
+      setCourses(coursesData);
+    } catch (error) {
+      console.error('Error loading courses:', error);
+      addNotification({
+        type: 'error',
+        title: 'Loading Error',
+        message: 'Failed to load courses. Please try again.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadSubjects = async () => {
-    if (!currentUser?.uid) return;
+    if (!selectedCourse) return;
     
     try {
       setLoading(true);
-      const lecturerSubjects = await getSubjectsByLecturer(currentUser.uid);
-      setSubjects(lecturerSubjects);
+      const courseSubjects = await getSubjectsByCourse(selectedCourse);
+      setSubjects(courseSubjects);
+      
+      if (courseSubjects.length === 0) {
+        addNotification({
+          type: 'info',
+          title: 'No Subjects Found',
+          message: 'No subjects found for the selected course. Please check if subjects are properly configured.'
+        });
+      }
     } catch (error) {
       console.error('Error loading subjects:', error);
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to load subjects'
+        message: 'Failed to load subjects for this course'
       });
     } finally {
       setLoading(false);
@@ -80,11 +118,27 @@ const ResultsManagement: React.FC = () => {
   };
 
   const loadStudents = async () => {
-    if (!selectedSubject) return;
+    if (!selectedSubject || !selectedCourse) return;
     
     try {
-      const subjectStudents = await getStudentsBySubject(selectedSubject);
+      // First try to get students by subject enrollment
+      let subjectStudents = await getStudentsBySubject(selectedSubject);
+      
+      // If no students found by subject, get students by course
+      if (subjectStudents.length === 0) {
+        console.log('No students found by subject, trying by course...');
+        subjectStudents = await getStudentsByCourse(selectedCourse);
+      }
+      
       setStudents(subjectStudents);
+      
+      if (subjectStudents.length === 0) {
+        addNotification({
+          type: 'info',
+          title: 'No Students Found',
+          message: 'No students found for this subject/course. Please check if students are properly enrolled.'
+        });
+      }
     } catch (error) {
       console.error('Error loading students:', error);
       addNotification({
@@ -96,11 +150,11 @@ const ResultsManagement: React.FC = () => {
   };
 
   const loadResults = async () => {
-    if (!currentUser?.uid || !selectedSubject) return;
+    if (!currentUser?.uid || !selectedSubject || !selectedCourse) return;
     
     try {
-      const lecturerResults = await getResultsByLecturer(currentUser.uid);
-      const subjectResults = lecturerResults.filter(result => result.subjectCode === selectedSubject);
+      const courseResults = await getResultsByCourse(selectedCourse);
+      const subjectResults = courseResults.filter(result => result.subjectCode === selectedSubject);
       setResults(subjectResults);
     } catch (error) {
       console.error('Error loading results:', error);
@@ -115,20 +169,31 @@ const ResultsManagement: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!currentUser?.uid || !selectedSubject) return;
+    if (!currentUser?.uid || !selectedSubject || !selectedCourse) return;
 
     try {
+      const totalMarks = (parseFloat(formData.assignment) || 0) + 
+                        (parseFloat(formData.exam) || 0) + 
+                        (parseFloat(formData.project) || 0);
+      
+      // Find the selected subject to get its name
+      const selectedSubjectData = subjects.find(s => s.code === selectedSubject);
+      
       const resultData = {
         studentId: formData.studentId,
         subjectCode: selectedSubject,
+        subjectName: selectedSubjectData?.name || '',
+        courseCode: selectedCourse,
         lecturerId: currentUser.uid,
         assignment: parseFloat(formData.assignment) || 0,
         exam: parseFloat(formData.exam) || 0,
         project: parseFloat(formData.project) || 0,
-        total: parseFloat(formData.total) || 0,
+        total: totalMarks,
+        mark: totalMarks, // Use total as the main mark
         grade: formData.grade,
         comments: formData.comments,
         semester: new Date().getMonth() < 6 ? 1 : 2, // Simple semester calculation
+        year: new Date().getFullYear(),
         academicYear: new Date().getFullYear().toString()
       };
 
@@ -167,10 +232,10 @@ const ResultsManagement: React.FC = () => {
     setFormData({
       studentId: result.studentId,
       subjectCode: result.subjectCode,
-      assignment: result.assignment.toString(),
-      exam: result.exam.toString(),
-      project: result.project.toString(),
-      total: result.total.toString(),
+      assignment: (result.assignment || 0).toString(),
+      exam: (result.exam || 0).toString(),
+      project: (result.project || 0).toString(),
+      total: (result.total || 0).toString(),
       grade: result.grade,
       comments: result.comments || ''
     });
@@ -259,31 +324,69 @@ const ResultsManagement: React.FC = () => {
         </button>
       </div>
 
-      {/* Subject Selection */}
+      {/* Course and Subject Selection */}
       <div className="bg-white rounded-lg shadow-sm border p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Subject</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {subjects.map((subject) => (
-            <div
-              key={subject.id}
-              onClick={() => setSelectedSubject(subject.code)}
-              className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                selectedSubject === subject.code
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center">
-                <BookOpen className="h-5 w-5 text-blue-600 mr-3" />
-                <div>
-                  <h3 className="font-medium text-gray-900">{subject.name}</h3>
-                  <p className="text-sm text-gray-600">{subject.code}</p>
-                  <p className="text-xs text-gray-500">{subject.credits} credits</p>
-                </div>
-              </div>
-            </div>
-          ))}
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Course and Subject</h2>
+        
+        {/* Course Selection */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Course</label>
+          <select
+            value={selectedCourse}
+            onChange={(e) => {
+              setSelectedCourse(e.target.value);
+              setSelectedSubject('');
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Select Course</option>
+            {courses.map(course => (
+              <option key={course.id} value={course.code}>{course.name}</option>
+            ))}
+          </select>
         </div>
+
+        {/* Subject Selection */}
+        {selectedCourse && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {subjects.map((subject) => (
+                <div
+                  key={subject.id}
+                  onClick={() => setSelectedSubject(subject.code)}
+                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                    selectedSubject === subject.code
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <BookOpen className="h-5 w-5 text-blue-600 mr-3" />
+                    <div>
+                      <h3 className="font-medium text-gray-900">{subject.name}</h3>
+                      <p className="text-sm text-gray-600">{subject.code}</p>
+                      <p className="text-xs text-gray-500">{subject.credits} credits</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {subjects.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>No subjects found for this course</p>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {!selectedCourse && (
+          <div className="text-center py-8 text-gray-500">
+            <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <p>Please select a course to view subjects</p>
+          </div>
+        )}
       </div>
 
       {selectedSubject && (
@@ -435,6 +538,28 @@ const ResultsManagement: React.FC = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {/* Course and Subject Info */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Course
+                    </label>
+                    <p className="text-sm text-gray-900">
+                      {courses.find(c => c.code === selectedCourse)?.name || 'No course selected'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Subject
+                    </label>
+                    <p className="text-sm text-gray-900">
+                      {subjects.find(s => s.code === selectedSubject)?.name || 'No subject selected'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Student

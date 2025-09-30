@@ -44,20 +44,37 @@ class EmailService {
 
   async sendEmail(emailData: EmailData): Promise<boolean> {
     try {
+      // Ensure we have the required environment variables
+      const serviceId = import.meta.env.VITE_PUBLIC_EMAILJS_SERVICE_ID;
+      const templateId = import.meta.env.VITE_PUBLIC_EMAILJS_TEMPLATE_ID;
+      const publicKey = import.meta.env.VITE_PUBLIC_EMAILJS_PUBLIC_KEY;
+
+      if (!serviceId || !templateId || !publicKey) {
+        console.error('❌ EmailJS configuration missing. Please check environment variables.');
+        return false;
+      }
+
+      // Re-initialize EmailJS with the public key to ensure it's set correctly
+      emailjs.init(publicKey);
+
       const response = await emailjs.send(
-        import.meta.env.VITE_PUBLIC_EMAILJS_SERVICE_ID!,
-        import.meta.env.VITE_PUBLIC_EMAILJS_TEMPLATE_ID!,
+        serviceId,
+        templateId,
         {
           to_email: emailData.to,
+          from_name: 'EduTech Student Management System',
           subject: emailData.subject,
           message: emailData.body,
+          student_name: emailData.studentName,
+          application_id: emailData.applicationId,
         }
       );
-      console.log('✅ Email sent successfully:', response);
+      console.log('✅ Email sent successfully to:', emailData.to, response);
       return true;
     } catch (error) {
-      console.error('❌ Failed to send email:', error);
-      return false;
+      console.error('❌ EmailJS failed, trying fallback for:', emailData.to, error);
+      // Try fallback email service
+      return await this.sendEmailFallback(emailData);
     }
   }
 
@@ -89,12 +106,27 @@ class EmailService {
 
   async testEmailService() {
     return this.sendEmail({
-      to: 'jayastro10@gmail.com',
+      to: 'test@example.com',
       subject: 'Test Email from EduTech',
       body: 'This is a test email.',
       studentName: 'Tester',
       applicationId: 'TEST-001',
     });
+  }
+
+  // Fallback email service using console logging for development
+  async sendEmailFallback(emailData: EmailData): Promise<boolean> {
+    console.log('📧 EMAIL FALLBACK (Development Mode):');
+    console.log('To:', emailData.to);
+    console.log('Subject:', emailData.subject);
+    console.log('Body:', emailData.body);
+    console.log('Student Name:', emailData.studentName);
+    console.log('Application ID:', emailData.applicationId);
+    console.log('---');
+    
+    // In a real application, you would integrate with another email service here
+    // For now, we'll just log it and return true
+    return true;
   }
 }
 

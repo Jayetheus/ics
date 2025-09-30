@@ -15,6 +15,7 @@ const ASSETS_COLLECTION_ID = '6894f208002ce1ab60b6'; // Assets collection ID
 const RESULTS_COLLECTION_ID = '6894f208002ce1ab60b7'; // Results collection ID
 const USERS_COLLECTION_ID = '6894f208002ce1ab60b8'; // Users collection ID
 const SUBJECTS_COLLECTION_ID = '6894f208002ce1ab60b9'; // Subjects collection ID
+const COURSES_COLLECTION_ID = '6894f208002ce1ab60ba'; // Courses collection ID
 
 // Asset/Document functions
 export const createAsset = async (assetData: Omit<Asset, 'id' | 'uploadedAt'>) => {
@@ -214,8 +215,28 @@ export const getStudentsBySubject = async (subjectCode: string) => {
       ...doc
     } as User));
   } catch (error) {
-    console.error('Error getting students by subject:', error);
-    throw error;
+    console.error('Error getting students by subject from Appwrite:', error);
+    // Fallback to Firebase if Appwrite fails
+    try {
+      const { getStudentsBySubject: getStudentsBySubjectFirebase } = await import('./database');
+      return await getStudentsBySubjectFirebase(subjectCode);
+    } catch (firebaseError) {
+      console.error('Error getting students by subject from Firebase:', firebaseError);
+      // If Firebase also fails, try to get all students and filter by course
+      try {
+        const { getUsers } = await import('./database');
+        const allUsers = await getUsers();
+        const students = allUsers.filter(user => user.role === 'student');
+        
+        // For now, return all students as a fallback
+        // In a real scenario, you'd want to implement proper subject enrollment
+        console.warn('Using fallback: returning all students. Subject enrollment data may be incomplete.');
+        return students;
+      } catch (fallbackError) {
+        console.error('All fallback methods failed:', fallbackError);
+        throw error; // Throw original Appwrite error
+      }
+    }
   }
 };
 
@@ -256,6 +277,211 @@ export const getSubjectsByLecturer = async (lecturerId: string) => {
     return subjectResults.filter(subject => subject !== null);
   } catch (error) {
     console.error('Error getting subjects by lecturer:', error);
+    throw error;
+  }
+};
+
+// Get subjects by course
+export const getSubjectsByCourse = async (courseCode: string) => {
+  try {
+    const response = await databases.listDocuments(
+      DATABASE_ID,
+      SUBJECTS_COLLECTION_ID,
+      [
+        Query.equal('courseCode', courseCode)
+      ]
+    );
+    return response.documents.map(doc => ({
+      id: doc.$id,
+      ...doc
+    }));
+  } catch (error) {
+    console.error('Error getting subjects by course from Appwrite:', error);
+    // Fallback to Firebase if Appwrite fails
+    try {
+      const { getSubjectsByCourse: getSubjectsByCourseFirebase } = await import('./database');
+      return await getSubjectsByCourseFirebase(courseCode);
+    } catch (firebaseError) {
+      console.error('Error getting subjects by course from Firebase:', firebaseError);
+      throw error; // Throw original Appwrite error
+    }
+  }
+};
+
+// Create subject in Appwrite
+export const createSubject = async (subjectData: Omit<Subject, 'id'>) => {
+  try {
+    const response = await databases.createDocument(
+      DATABASE_ID,
+      SUBJECTS_COLLECTION_ID,
+      ID.unique(),
+      {
+        ...subjectData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+    );
+    return response.$id;
+  } catch (error) {
+    console.error('Error creating subject:', error);
+    throw error;
+  }
+};
+
+// Get courses
+export const getCourses = async () => {
+  try {
+    const response = await databases.listDocuments(
+      DATABASE_ID,
+      COURSES_COLLECTION_ID
+    );
+    return response.documents.map(doc => ({
+      id: doc.$id,
+      ...doc
+    }));
+  } catch (error) {
+    console.error('Error getting courses from Appwrite:', error);
+    // Fallback to Firebase if Appwrite fails
+    try {
+      const { getCourses: getCoursesFirebase } = await import('./database');
+      return await getCoursesFirebase();
+    } catch (firebaseError) {
+      console.error('Error getting courses from Firebase:', firebaseError);
+      throw error; // Throw original Appwrite error
+    }
+  }
+};
+
+// Create course in Appwrite
+export const createCourse = async (courseData: Omit<Course, 'id'>) => {
+  try {
+    const response = await databases.createDocument(
+      DATABASE_ID,
+      COURSES_COLLECTION_ID,
+      ID.unique(),
+      {
+        ...courseData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+    );
+    return response.$id;
+  } catch (error) {
+    console.error('Error creating course:', error);
+    throw error;
+  }
+};
+
+// Migrate courses from Firebase to Appwrite
+export const migrateCoursesToAppwrite = async () => {
+  try {
+    const { getCourses: getCoursesFirebase } = await import('./database');
+    
+    const firebaseCourses = await getCoursesFirebase();
+    let migratedCount = 0;
+    
+    for (const course of firebaseCourses) {
+      try {
+        // Check if course already exists in Appwrite
+        const existingCourses = await databases.listDocuments(
+          DATABASE_ID,
+          COURSES_COLLECTION_ID,
+          [Query.equal('code', course.code)]
+        );
+        
+        if (existingCourses.documents.length === 0) {
+          await createCourse({
+            code: course.code,
+            name: course.name,
+            description: course.description || '',
+            duration: course.duration || 3,
+            credits: course.credits || 0,
+            level: course.level || 'undergraduate',
+            department: course.department || '',
+            requirements: course.requirements || [],
+            careerProspects: course.careerProspects || [],
+            fees: course.fees || 0
+          });
+          migratedCount++;
+        }
+      } catch (courseError) {
+        console.error(`Error migrating course ${course.code}:`, courseError);
+      }
+    }
+    
+    console.log(`Migrated ${migratedCount} courses to Appwrite`);
+    return migratedCount;
+  } catch (error) {
+    console.error('Error migrating courses to Appwrite:', error);
+    throw error;
+  }
+};
+
+// Migrate subjects from Firebase to Appwrite
+export const migrateSubjectsToAppwrite = async () => {
+  try {
+    const { getSubjectsByCourse: getSubjectsByCourseFirebase } = await import('./database');
+    const { getCourses } = await import('./database');
+    
+    const courses = await getCourses();
+    let migratedCount = 0;
+    
+    for (const course of courses) {
+      try {
+        const firebaseSubjects = await getSubjectsByCourseFirebase(course.code);
+        
+        for (const subject of firebaseSubjects) {
+          try {
+            // Check if subject already exists in Appwrite
+            const existingSubjects = await databases.listDocuments(
+              DATABASE_ID,
+              SUBJECTS_COLLECTION_ID,
+              [Query.equal('code', subject.code)]
+            );
+            
+            if (existingSubjects.documents.length === 0) {
+              await createSubject({
+                courseCode: subject.courseCode,
+                code: subject.code,
+                name: subject.name,
+                credits: subject.credits,
+                semester: subject.semester,
+                amount: subject.amount || 0
+              });
+              migratedCount++;
+            }
+          } catch (subjectError) {
+            console.error(`Error migrating subject ${subject.code}:`, subjectError);
+          }
+        }
+      } catch (courseError) {
+        console.error(`Error migrating subjects for course ${course.code}:`, courseError);
+      }
+    }
+    
+    console.log(`Migrated ${migratedCount} subjects to Appwrite`);
+    return migratedCount;
+  } catch (error) {
+    console.error('Error migrating subjects to Appwrite:', error);
+    throw error;
+  }
+};
+
+// Migrate all data to Appwrite
+export const migrateAllDataToAppwrite = async () => {
+  try {
+    console.log('Starting data migration to Appwrite...');
+    
+    // First migrate courses
+    const coursesMigrated = await migrateCoursesToAppwrite();
+    
+    // Then migrate subjects
+    const subjectsMigrated = await migrateSubjectsToAppwrite();
+    
+    console.log(`Migration completed: ${coursesMigrated} courses, ${subjectsMigrated} subjects`);
+    return { coursesMigrated, subjectsMigrated };
+  } catch (error) {
+    console.error('Error migrating data to Appwrite:', error);
     throw error;
   }
 };

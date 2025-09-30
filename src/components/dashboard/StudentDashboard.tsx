@@ -46,15 +46,15 @@ const StudentDashboard: React.FC = () => {
       console.log(currentUser.uid)
       try {
         setError(null);
-        const [resultsData, paymentsData, applicationsData, regs, studentInfo, financesData, attendanceData] = await Promise.all([
-          getResultsByStudent(currentUser.uid),
-          getPaymentsByStudent(currentUser.uid),
-          getApplicationsByStudent(currentUser.uid),
-          getStudentRegistration(currentUser.uid),
-          getUserById(currentUser.uid),
-          getFinancesByStudentId(currentUser.uid),
-          getAttendanceRecordsByStudent(currentUser.uid)
-        ]);
+    const [resultsData, paymentsData, applicationsData, regs, studentInfo, financesData, attendanceData] = await Promise.all([
+      getResultsByStudent(currentUser.uid),
+      getPaymentsByStudent(currentUser.uid),
+      getApplicationsByStudent(currentUser.uid),
+      getStudentRegistration(currentUser.uid),
+      getUserById(currentUser.uid),
+      getFinancesByStudentId(currentUser.uid),
+      getAttendanceRecordsByStudent(currentUser.uid)
+    ]);
         
         // Get timetable for the student's course if registered
         let timetableData: Timetable[] = [];
@@ -84,6 +84,12 @@ const StudentDashboard: React.FC = () => {
           title: 'Dashboard Error',
           message: 'Failed to load dashboard data. Please try again.',
         });
+        // Set empty arrays as fallback to prevent blank screen
+        setResults([]);
+        setTimetable([]);
+        setPayments([]);
+        setApplications([]);
+        setAttendanceRecords([]);
       } finally {
         setLoading(false);
       }
@@ -377,23 +383,23 @@ const StudentDashboard: React.FC = () => {
                 <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
                     <div className={`p-2 rounded-full ${
-                      result.mark >= 90 ? 'bg-green-100' :
-                      result.mark >= 80 ? 'bg-blue-100' :
-                      result.mark >= 70 ? 'bg-yellow-100' : 'bg-red-100'
+                      (result.mark || 0) >= 90 ? 'bg-green-100' :
+                      (result.mark || 0) >= 80 ? 'bg-blue-100' :
+                      (result.mark || 0) >= 70 ? 'bg-yellow-100' : 'bg-red-100'
                     }`}>
                       <CheckCircle className={`h-4 w-4 ${
-                        result.mark >= 90 ? 'text-green-600' :
-                        result.mark >= 80 ? 'text-blue-600' :
-                        result.mark >= 70 ? 'text-yellow-600' : 'text-red-600'
+                        (result.mark || 0) >= 90 ? 'text-green-600' :
+                        (result.mark || 0) >= 80 ? 'text-blue-600' :
+                        (result.mark || 0) >= 70 ? 'text-yellow-600' : 'text-red-600'
                       }`} />
                     </div>
                     <div className="ml-3">
-                      <p className="font-medium text-gray-900">{result.subjectName}</p>
+                      <p className="font-medium text-gray-900">{result.subjectName || 'N/A'}</p>
                       <p className="text-sm text-gray-600">Grade: {result.grade}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold text-gray-900">{result.mark}%</p>
+                    <p className="text-lg font-bold text-gray-900">{result.mark || 0}%</p>
                   </div>
                 </div>
               ))}

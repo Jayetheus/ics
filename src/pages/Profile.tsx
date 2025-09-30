@@ -6,10 +6,11 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import { COLLEGES, COURSES } from '../data/constants';
+import { getCourses } from '../services/database';
 import FileUpload from '../components/common/FileUpload';
-import { getAssetsByUploader, deleteAsset } from '../services/appwriteDatabase';
-import { Asset } from '../types';
+import { getAssetsByUploader, deleteAsset, createAsset } from '../services/appwriteDatabase';
+import { getFileViewUrl, getFileDownloadUrl } from '../services/storage';
+import { Asset, Course } from '../types';
 import { useNotification } from '../context/NotificationContext';
 
 const Profile: React.FC = () => {
@@ -36,8 +37,40 @@ const Profile: React.FC = () => {
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
 
+  // Data states
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [colleges, setColleges] = useState<string[]>([]);
+
+  // Load courses and colleges data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const coursesData = await getCourses();
+        console.log('Loaded courses:', coursesData);
+        setCourses(coursesData);
+        
+        // Extract unique colleges from courses
+        const uniqueColleges = [...new Set(coursesData.map(course => course.department || 'Unknown Department'))];
+        setColleges(uniqueColleges);
+        console.log('Loaded colleges:', uniqueColleges);
+      } catch (error) {
+        console.error('Error loading profile data:', error);
+        addNotification({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to load profile data'
+        });
+        // Set empty arrays as fallback
+        setCourses([]);
+        setColleges([]);
+      }
+    };
+
+    loadData();
+  }, [addNotification]);
+
   const handleSave = async () => {
-    if (!currentUser) return;
+    if (!currentUser || !db) return;
     
     try {
       setLoading(true);
@@ -91,8 +124,11 @@ const Profile: React.FC = () => {
     try {
       const assetData = {
         name: fileData.name,
+        originalName: fileData.originalName || fileData.name,
         type: fileData.type,
         url: fileData.url,
+        fileId: fileData.fileId,
+        bucketId: fileData.bucketId,
         uploadedBy: currentUser.uid,
         size: fileData.size,
         category: (fileData.type.startsWith('image/') ? 'image' : 'document') as 'image' | 'document' | 'video' | 'other'
@@ -141,12 +177,54 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleDocumentDownload = (url: string, name: string) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = name;
-    link.target = '_blank';
-    link.click();
+  const handleDocumentDownload = async (document: Asset) => {
+    try {
+      if (document.fileId) {
+        const downloadUrl = getFileDownloadUrl(document.fileId);
+        const link = window.document.createElement('a');
+        link.href = downloadUrl;
+        link.download = document.originalName || document.name;
+        link.target = '_blank';
+        link.click();
+      } else if (document.url) {
+        // Fallback for old documents with URL
+        const link = window.document.createElement('a');
+        link.href = document.url;
+        link.download = document.originalName || document.name;
+        link.target = '_blank';
+        link.click();
+      } else {
+        throw new Error('No file available for download');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      addNotification({
+        type: 'error',
+        title: 'Download Failed',
+        message: 'Failed to download file. Please try again.'
+      });
+    }
+  };
+
+  const handleDocumentView = (document: Asset) => {
+    try {
+      if (document.fileId) {
+        const viewUrl = getFileViewUrl(document.fileId);
+        window.open(viewUrl, '_blank');
+      } else if (document.url) {
+        // Fallback for old documents with URL
+        window.open(document.url, '_blank');
+      } else {
+        throw new Error('No file available for viewing');
+      }
+    } catch (error) {
+      console.error('View error:', error);
+      addNotification({
+        type: 'error',
+        title: 'View Failed',
+        message: 'Failed to open file. Please try again.'
+      });
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -293,7 +371,7 @@ const Profile: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Select College/University</option>
-                  {COLLEGES.map(college => (
+                  {colleges.map((college: string) => (
                     <option key={college} value={college}>{college}</option>
                   ))}
                 </select>
@@ -379,8 +457,8 @@ const Profile: React.FC = () => {
                       onChange={(e) => setProfileData({ ...profileData, course: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     >
-                      {COURSES.map(course => (
-                        <option key={course} value={course}>{course}</option>
+                      {courses.map((course: Course) => (
+                        <option key={course.code} value={course.code}>{course.name}</option>
                       ))}
                     </select>
                   ) : (
@@ -508,14 +586,14 @@ const Profile: React.FC = () => {
 
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => window.open(document.url, '_blank')}
+                    onClick={() => handleDocumentView(document)}
                     className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
                   >
                     <Eye className="h-3 w-3 mr-1" />
                     View
                   </button>
                   <button
-                    onClick={() => handleDocumentDownload(document.url, document.name)}
+                    onClick={() => handleDocumentDownload(document)}
                     className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors"
                   >
                     <Download className="h-3 w-3 mr-1" />

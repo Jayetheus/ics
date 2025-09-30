@@ -109,14 +109,24 @@ export interface College {
 export interface Result {
   id: string;
   studentId: string;
-  subjectId: string;
-  subjectName: string;
+  subjectId?: string;
+  subjectName?: string;
   subjectCode: string;
-  courseCode: string;
-  mark: number;
+  courseCode?: string;
+  mark?: number;
   grade: string;
-  semester: string;
+  semester: string | number;
   year: number;
+  // Additional fields for detailed results
+  assignment?: number;
+  exam?: number;
+  project?: number;
+  total?: number;
+  comments?: string;
+  lecturerId?: string;
+  academicYear?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Timetable {

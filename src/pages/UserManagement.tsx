@@ -5,9 +5,9 @@ import {
   User as UserIcon, Mail, Shield, Clock,
   Image, FolderOpen
 } from 'lucide-react';
-import { getUsers, createUser, updateUser, deleteUser, createLecturer, getColleges } from '../services/database';
-import { getAssetsByUploader, deleteAsset } from '../services/appwriteDatabase';
-import { generateStaffNumber } from '../services/dataLoader';
+import { getUsers, createUser, updateUser, deleteUser, createLecturer, getColleges, generateStaffNumber } from '../services/database';
+import { getAssetsByUploader, deleteAsset, createAsset } from '../services/appwriteDatabase';
+import { getFileViewUrl, getFileDownloadUrl } from '../services/storage';
 import { User, College, Asset } from '../types';
 import { DEPARTMENTS } from '../data/constants';
 import { EmailData, emailService } from '../services/emailService';
@@ -189,8 +189,11 @@ const UserManagement: React.FC = () => {
     try {
       const assetData = {
         name: fileData.name,
+        originalName: fileData.originalName || fileData.name,
         type: fileData.type,
         url: fileData.url,
+        fileId: fileData.fileId,
+        bucketId: fileData.bucketId,
         uploadedBy: selectedUser.uid,
         size: fileData.size,
         category: (fileData.type.startsWith('image/') ? 'image' : 'document') as 'image' | 'document' | 'video' | 'other'
@@ -239,12 +242,54 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  const handleDocumentDownload = (url: string, name: string) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = name;
-    link.target = '_blank';
-    link.click();
+  const handleDocumentDownload = async (asset: Asset) => {
+    try {
+      if (asset.fileId) {
+        const downloadUrl = getFileDownloadUrl(asset.fileId);
+        const link = window.document.createElement('a');
+        link.href = downloadUrl;
+        link.download = asset.originalName || asset.name;
+        link.target = '_blank';
+        link.click();
+      } else if (asset.url) {
+        // Fallback for old documents with URL
+        const link = window.document.createElement('a');
+        link.href = asset.url;
+        link.download = asset.originalName || asset.name;
+        link.target = '_blank';
+        link.click();
+      } else {
+        throw new Error('No file available for download');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      addNotification({
+        type: 'error',
+        title: 'Download Failed',
+        message: 'Failed to download file. Please try again.'
+      });
+    }
+  };
+
+  const handleDocumentView = (asset: Asset) => {
+    try {
+      if (asset.fileId) {
+        const viewUrl = getFileViewUrl(asset.fileId);
+        window.open(viewUrl, '_blank');
+      } else if (asset.url) {
+        // Fallback for old documents with URL
+        window.open(asset.url, '_blank');
+      } else {
+        throw new Error('No file available for viewing');
+      }
+    } catch (error) {
+      console.error('View error:', error);
+      addNotification({
+        type: 'error',
+        title: 'View Failed',
+        message: 'Failed to open file. Please try again.'
+      });
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -406,7 +451,7 @@ const UserManagement: React.FC = () => {
                     className="border px-3 py-2 rounded w-full"
                   >
                     <option value="">Select Department</option>
-                    {DEPARTMENTS.map(dept => (
+                    {DEPARTMENTS.map((dept: string) => (
                       <option key={dept} value={dept}>{dept}</option>
                     ))}
                   </select>
@@ -817,14 +862,14 @@ const UserManagement: React.FC = () => {
 
                         <div className="flex space-x-2">
                           <button
-                            onClick={() => window.open(document.url, '_blank')}
+                            onClick={() => handleDocumentView(document)}
                             className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
                           >
                             <Eye className="h-3 w-3 mr-1" />
                             View
                           </button>
                           <button
-                            onClick={() => handleDocumentDownload(document.url, document.name)}
+                            onClick={() => handleDocumentDownload(document)}
                             className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors"
                           >
                             <Download className="h-3 w-3 mr-1" />

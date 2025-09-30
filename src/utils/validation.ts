@@ -1,3 +1,5 @@
+import React from 'react';
+
 export interface ValidationRule {
   required?: boolean;
   minLength?: number;
@@ -205,8 +207,6 @@ export const useFormValidation = (initialData: any, validationRules: { [key: str
   };
 };
 
-// Import React for the hook
-import React from 'react';
 
 // Individual validation functions for testing
 export const validateEmail = (email: string): boolean => {

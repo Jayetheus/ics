@@ -5,6 +5,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import NotificationContainer from './components/common/NotificationContainer';
+import FirebaseError from './components/common/FirebaseError';
 import { useNotification } from './context/NotificationContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -224,6 +225,21 @@ const AppContent: React.FC = () => {
 
 function App() {
   console.log("App component rendered");
+
+  // Check if Firebase is properly configured
+  const isFirebaseConfigured = () => {
+    const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
+    const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+    return apiKey && projectId && apiKey !== 'demo-api-key' && projectId !== 'demo-project';
+  };
+
+  if (!isFirebaseConfigured()) {
+    return (
+      <ErrorBoundary>
+        <FirebaseError />
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <ErrorBoundary>

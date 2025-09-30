@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
-import { generateStudentNumber } from '../services/dataLoader';
+import { generateStudentNumber, getColleges } from '../services/database';
 import { Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 
 const Register: React.FC = () => {
@@ -77,8 +77,6 @@ const Register: React.FC = () => {
     firstName: string;
     lastName: string;
     college: string;
-    course: string;
-    year: number;
     phone: string;
     idNumber: string;
     examNumber: string;
@@ -91,8 +89,6 @@ const Register: React.FC = () => {
     firstName: '',
     lastName: '',
     college: '',
-    course: '',
-    year: 1,
     phone: '',
     idNumber: '',
     examNumber: '',
@@ -104,6 +100,7 @@ const Register: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [colleges, setColleges] = useState<any[]>([]);
 
   const { register, currentUser } = useAuth();
   const navigate = useNavigate();
@@ -112,6 +109,19 @@ const Register: React.FC = () => {
 
 
   useEffect(() => { if (currentUser) navigate("/", { replace: true }) }, [currentUser, navigate]);
+
+  // Load colleges on component mount
+  useEffect(() => {
+    const loadColleges = async () => {
+      try {
+        const collegesData = await getColleges();
+        setColleges(collegesData);
+      } catch (error) {
+        console.error('Error loading colleges:', error);
+      }
+    };
+    loadColleges();
+  }, []);
 
   // Helper to pick n random unique items from an array
     const pickRandom = <T,>(arr: T[], n: number): T[] => {
@@ -160,7 +170,7 @@ const Register: React.FC = () => {
       return setError('Password must be at least 6 characters');
     }
 
-    if (formData.examNumber.length !== 10) {
+    if (formData.examNumber.length < 10) {
       return setError('Exam Number must be at least 10 numbers');
     }
 
@@ -175,8 +185,6 @@ const Register: React.FC = () => {
         phone: formData.phone,
         idNumber: formData.idNumber,
         ...(formData.role === 'student' ? {
-          course: formData.course,
-          year: formData.year,
           studentNumber: await generateStudentNumber(),
         } : {}),
         examNumber: formData.examNumber,
@@ -184,6 +192,7 @@ const Register: React.FC = () => {
       };
 
       await register(formData.email, formData.password, formData.role, profileData);
+      
       setSuccess('Registration successful! Please log in.');
       setTimeout(() => navigate('/login'), 2000);
     } catch (error: any) {
@@ -396,6 +405,27 @@ const Register: React.FC = () => {
               </div>
             </div>
 
+            {/* College Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                College/Faculty
+              </label>
+              <select
+                name="college"
+                required
+                value={formData.college}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select a College/Faculty</option>
+                {colleges.map((college) => (
+                  <option key={college.id} value={college.name}>
+                    {college.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
@@ -414,6 +444,9 @@ const Register: React.FC = () => {
             </p>
             <p className="text-xs text-gray-500 mt-2">
               Student and staff numbers will be automatically generated upon registration.
+            </p>
+            <p className="text-xs text-blue-600 mt-1">
+              After registration, students can apply for courses in the Applications section.
             </p>
           </div>
         </div>

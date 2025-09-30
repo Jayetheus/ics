@@ -50,8 +50,10 @@ const Results: React.FC = () => {
 
   const calculateGPA = (results: Result[]) => {
     if (results.length === 0) return 0;
-    const total = results.reduce((sum, result) => sum + result.mark, 0);
-    return (total / results.length).toFixed(2);
+    const validResults = results.filter(result => result.mark !== undefined && result.mark !== null);
+    if (validResults.length === 0) return 0;
+    const total = validResults.reduce((sum, result) => sum + (result.mark || 0), 0);
+    return (total / validResults.length).toFixed(2);
   };
 
   const filteredResults = results.filter(result => {
@@ -188,10 +190,10 @@ const Results: React.FC = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Course
+                  Subject
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Code
+                  Subject Code
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Semester
@@ -211,10 +213,10 @@ const Results: React.FC = () => {
               {filteredResults.map((result) => (
                 <tr key={result.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{result.courseName}</div>
+                    <div className="text-sm font-medium text-gray-900">{result.subjectName || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{result.courseCode}</div>
+                    <div className="text-sm text-gray-900">{result.subjectCode}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{result.semester}</div>
@@ -223,7 +225,9 @@ const Results: React.FC = () => {
                     <div className="text-sm text-gray-900">{result.year}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-semibold text-gray-900">{result.mark}%</div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {result.mark !== undefined ? `${result.mark}%` : 'N/A'}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getGradeColor(result.grade)}`}>
