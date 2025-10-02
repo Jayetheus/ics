@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, File, Image, FileText } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { uploadFile } from '../../services/storage';
-import { createAsset } from '../../services/appwriteDatabase';
+import { createAsset } from '../../services/database';
 import { useNotification } from '../../context/NotificationContext';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -117,11 +117,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
     setDragOver(false);
   };
 
-  const getFileIcon = (type: string) => {
-    if (type.startsWith('image/')) return <Image className="h-8 w-8" />;
-    if (type.includes('pdf') || type.includes('document')) return <FileText className="h-8 w-8" />;
-    return <File className="h-8 w-8" />;
-  };
+  // file icon helper intentionally removed (not used)
 
   return (
     <div className={`relative ${className}`}>

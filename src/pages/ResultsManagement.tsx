@@ -1,405 +1,287 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  BookOpen, Users, Plus, Edit, Trash2, Search, Filter, 
-  CheckCircle, XCircle, AlertCircle, Save, Eye
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Edit, Trash2, Save, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import { 
-  getSubjectsByLecturer, 
-  getStudentsBySubject, 
-  getResultsByLecturer,
+import {
+  getCourses,
+  getSubjectsByCourse,
+  getUsers,
+  getResultsByCourse,
   createResult,
   updateResult,
   deleteResult
-} from '../services/appwriteDatabase';
-import { Result, User } from '../types';
+} from '../services/database';
+import { Course, Subject, User, Result } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
-interface Subject {
-  id: string;
-  code: string;
-  name: string;
-  credits: number;
-  semester: number;
-}
-
 const ResultsManagement: React.FC = () => {
-  const { currentUser } = useAuth();
+  useAuth();
   const { addNotification } = useNotification();
-  
+
+  const [loading, setLoading] = useState(true);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [students, setStudents] = useState<User[]>([]);
   const [results, setResults] = useState<Result[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const [selectedCourse, setSelectedCourse] = useState<string>('');
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [selectedStudent, setSelectedStudent] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
+
+  const [formMark, setFormMark] = useState<number | ''>('');
+  const [formGrade, setFormGrade] = useState<string>('');
   const [editingResult, setEditingResult] = useState<Result | null>(null);
-  
-  // Form state
-  const [formData, setFormData] = useState({
-    studentId: '',
-    subjectCode: '',
-    assignment: '',
-    exam: '',
-    project: '',
-    total: '',
-    grade: '',
-    comments: ''
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [coursesData, usersData] = await Promise.all([getCourses(), getUsers()]);
+        setCourses(coursesData);
+        // keep only students
+        setStudents(usersData.filter(u => u.role === 'student'));
+      } catch (err) {
+        console.error(err);
+        addNotification({ type: 'error', title: 'Error', message: 'Failed to load initial data' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [addNotification]);
+
+  useEffect(() => {
+    if (!selectedCourse) {
+      setSubjects([]);
+      setSelectedSubject('');
+      return;
+    }
+
+    const loadSubjects = async () => {
+      setLoading(true);
+      try {
+        const subs = await getSubjectsByCourse(selectedCourse);
+        setSubjects(subs);
+      } catch (err) {
+        console.error(err);
+        addNotification({ type: 'error', title: 'Error', message: 'Failed to load subjects' });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSubjects();
+  }, [selectedCourse, addNotification]);
+
+  useEffect(() => {
+    if (!selectedSubject) {
+      setResults([]);
+      return;
+    }
+
+    const loadResults = async () => {
+      setLoading(true);
+      try {
+        // fetch results for the course and filter by subject
+        const courseResults = await getResultsByCourse(selectedCourse || '');
+        const subjectResults = courseResults.filter(r => r.subjectCode === selectedSubject);
+        setResults(subjectResults);
+      } catch (err) {
+        console.error(err);
+        addNotification({ type: 'error', title: 'Error', message: 'Failed to load results' });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadResults();
+  }, [selectedSubject, selectedCourse, addNotification]);
+
+  const filteredStudents = students.filter(s => {
+    const full = `${s.firstName} ${s.lastName}`.toLowerCase();
+    return (
+      full.includes(searchTerm.toLowerCase()) ||
+      (s.studentNumber || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
-  useEffect(() => {
-    loadSubjects();
-  }, [currentUser]);
+  const calculateGrade = (mark: number) => {
+    if (mark >= 80) return 'A';
+    if (mark >= 70) return 'B';
+    if (mark >= 60) return 'C';
+    if (mark >= 50) return 'D';
+    return 'F';
+  };
 
-  useEffect(() => {
-    if (selectedSubject) {
-      loadStudents();
-      loadResults();
-    }
-  }, [selectedSubject]);
-
-  const loadSubjects = async () => {
-    if (!currentUser?.uid) return;
-    
-    try {
-      setLoading(true);
-      const lecturerSubjects = await getSubjectsByLecturer(currentUser.uid);
-      setSubjects(lecturerSubjects);
-    } catch (error) {
-      console.error('Error loading subjects:', error);
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to load subjects'
-      });
-    } finally {
-      setLoading(false);
+  const handleSelectStudent = (uid: string) => {
+    setSelectedStudent(uid);
+    // populate mark if existing result
+    const existing = results.find(r => r.studentId === uid);
+    if (existing) {
+      setFormMark(typeof existing.mark === 'number' ? existing.mark : Number(existing.mark || 0));
+      setFormGrade(existing.grade || calculateGrade(Number(existing.mark || 0)));
+      setEditingResult(existing);
+    } else {
+      setFormMark('');
+      setFormGrade('');
+      setEditingResult(null);
     }
   };
 
-  const loadStudents = async () => {
-    if (!selectedSubject) return;
-    
-    try {
-      const subjectStudents = await getStudentsBySubject(selectedSubject);
-      setStudents(subjectStudents);
-    } catch (error) {
-      console.error('Error loading students:', error);
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to load students'
-      });
+  const handleSave = async () => {
+    if (!selectedCourse || !selectedSubject || !selectedStudent) {
+      addNotification({ type: 'error', title: 'Validation', message: 'Select course, subject and student' });
+      return;
     }
-  };
-
-  const loadResults = async () => {
-    if (!currentUser?.uid || !selectedSubject) return;
-    
-    try {
-      const lecturerResults = await getResultsByLecturer(currentUser.uid);
-      const subjectResults = lecturerResults.filter(result => result.subjectCode === selectedSubject);
-      setResults(subjectResults);
-    } catch (error) {
-      console.error('Error loading results:', error);
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to load results'
-      });
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!currentUser?.uid || !selectedSubject) return;
+    const markNum = Number(formMark) || 0;
+    const payload: Omit<Result, 'id'> = {
+      studentId: selectedStudent,
+      subjectId: selectedSubject,
+      subjectName: subjects.find(s => s.code === selectedSubject)?.name || '',
+      subjectCode: selectedSubject,
+      courseCode: selectedCourse,
+      mark: markNum,
+      grade: formGrade || calculateGrade(markNum),
+      semester: new Date().getMonth() < 6 ? 'Semester 1' : 'Semester 2',
+      year: new Date().getFullYear()
+    } as any;
 
     try {
-      const resultData = {
-        studentId: formData.studentId,
-        subjectCode: selectedSubject,
-        lecturerId: currentUser.uid,
-        assignment: parseFloat(formData.assignment) || 0,
-        exam: parseFloat(formData.exam) || 0,
-        project: parseFloat(formData.project) || 0,
-        total: parseFloat(formData.total) || 0,
-        grade: formData.grade,
-        comments: formData.comments,
-        semester: new Date().getMonth() < 6 ? 1 : 2, // Simple semester calculation
-        academicYear: new Date().getFullYear().toString()
-      };
-
       if (editingResult) {
-        await updateResult(editingResult.id, resultData);
-        addNotification({
-          type: 'success',
-          title: 'Success',
-          message: 'Result updated successfully'
-        });
+        await updateResult(editingResult.id, payload as Partial<Result>);
+        addNotification({ type: 'success', title: 'Updated', message: 'Result updated' });
       } else {
-        await createResult(resultData);
-        addNotification({
-          type: 'success',
-          title: 'Success',
-          message: 'Result created successfully'
-        });
+        await createResult(payload);
+        addNotification({ type: 'success', title: 'Created', message: 'Result created' });
       }
 
-      setShowAddForm(false);
+      // refresh
+      const courseResults = await getResultsByCourse(selectedCourse);
+      setResults(courseResults.filter(r => r.subjectCode === selectedSubject));
+      setFormMark('');
+      setFormGrade('');
+      setSelectedStudent('');
       setEditingResult(null);
-      resetForm();
-      loadResults();
-    } catch (error) {
-      console.error('Error saving result:', error);
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to save result'
-      });
+    } catch (err) {
+      console.error(err);
+      addNotification({ type: 'error', title: 'Error', message: 'Failed to save result' });
     }
   };
 
-  const handleEdit = (result: Result) => {
-    setEditingResult(result);
-    setFormData({
-      studentId: result.studentId,
-      subjectCode: result.subjectCode,
-      assignment: result.assignment.toString(),
-      exam: result.exam.toString(),
-      project: result.project.toString(),
-      total: result.total.toString(),
-      grade: result.grade,
-      comments: result.comments || ''
-    });
-    setShowAddForm(true);
-  };
-
-  const handleDelete = async (resultId: string) => {
-    if (!window.confirm('Are you sure you want to delete this result?')) return;
-
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Delete this result?')) return;
     try {
-      await deleteResult(resultId);
-      addNotification({
-        type: 'success',
-        title: 'Success',
-        message: 'Result deleted successfully'
-      });
-      loadResults();
-    } catch (error) {
-      console.error('Error deleting result:', error);
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to delete result'
-      });
+      await deleteResult(id);
+      setResults(prev => prev.filter(r => r.id !== id));
+      addNotification({ type: 'success', title: 'Deleted', message: 'Result deleted' });
+    } catch (err) {
+      console.error(err);
+      addNotification({ type: 'error', title: 'Error', message: 'Failed to delete result' });
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      studentId: '',
-      subjectCode: '',
-      assignment: '',
-      exam: '',
-      project: '',
-      total: '',
-      grade: '',
-      comments: ''
-    });
-  };
-
-  const calculateTotal = () => {
-    const assignment = parseFloat(formData.assignment) || 0;
-    const exam = parseFloat(formData.exam) || 0;
-    const project = parseFloat(formData.project) || 0;
-    const total = assignment + exam + project;
-    
-    setFormData(prev => ({
-      ...prev,
-      total: total.toString(),
-      grade: total >= 80 ? 'A' : total >= 70 ? 'B' : total >= 60 ? 'C' : total >= 50 ? 'D' : 'F'
-    }));
-  };
-
-  const filteredResults = results.filter(result => {
-    const student = students.find(s => s.uid === result.studentId);
-    const studentName = student ? `${student.firstName} ${student.lastName}`.toLowerCase() : '';
-    return studentName.includes(searchTerm.toLowerCase());
-  });
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <LoadingSpinner size="lg" message="Loading subjects..." />
-      </div>
-    );
-  }
+  if (loading) return <div className="flex items-center justify-center min-h-64"><LoadingSpinner size="lg" message="Loading..." /></div>;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Results Management</h1>
-          <p className="text-gray-600">Manage student results for your subjects</p>
+          <h1 className="text-2xl font-bold">Results Management</h1>
+          <p className="text-gray-600">Create and update student marks</p>
         </div>
-        <button
-          onClick={() => {
-            setShowAddForm(true);
-            setEditingResult(null);
-            resetForm();
-          }}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Result
-        </button>
       </div>
 
-      {/* Subject Selection */}
       <div className="bg-white rounded-lg shadow-sm border p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Subject</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {subjects.map((subject) => (
-            <div
-              key={subject.id}
-              onClick={() => setSelectedSubject(subject.code)}
-              className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                selectedSubject === subject.code
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center">
-                <BookOpen className="h-5 w-5 text-blue-600 mr-3" />
-                <div>
-                  <h3 className="font-medium text-gray-900">{subject.name}</h3>
-                  <p className="text-sm text-gray-600">{subject.code}</p>
-                  <p className="text-xs text-gray-500">{subject.credits} credits</p>
-                </div>
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Course</label>
+            <select value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)} className="w-full px-3 py-2 border rounded-md">
+              <option value="">Select course</option>
+              {courses.map(c => <option key={c.id} value={c.code}>{c.name} ({c.code})</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+            <select value={selectedSubject} onChange={e => setSelectedSubject(e.target.value)} className="w-full px-3 py-2 border rounded-md">
+              <option value="">Select subject</option>
+              {subjects.map(s => <option key={s.id} value={s.code}>{s.name} ({s.code})</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Search Student</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 px-3 py-2 border rounded-md" placeholder="Search by name or number" />
             </div>
-          ))}
+          </div>
         </div>
       </div>
 
-      {selectedSubject && (
-        <>
-          {/* Search and Filter */}
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search students..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-white rounded-lg shadow-sm border p-6 lg:col-span-1">
+          <h2 className="text-lg font-semibold mb-4">Students</h2>
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {filteredStudents.map(s => (
+              <button key={s.uid} onClick={() => handleSelectStudent(s.uid)} className={`w-full text-left p-2 rounded-md transition-colors ${selectedStudent === s.uid ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'}`}>
+                <div className="font-medium">{s.firstName} {s.lastName}</div>
+                <div className="text-sm text-gray-500">{s.studentNumber || 'N/A'}</div>
+              </button>
+            ))}
+            {filteredStudents.length === 0 && <div className="text-sm text-gray-500">No students found</div>}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border p-6 lg:col-span-2">
+          <h2 className="text-lg font-semibold mb-4">Enter Marks</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">Selected Student</label>
+              <div className="p-2 border rounded-md">{selectedStudent ? (students.find(s => s.uid === selectedStudent)?.firstName + ' ' + students.find(s => s.uid === selectedStudent)?.lastName) : 'None'}</div>
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">Mark</label>
+              <input type="number" min={0} max={100} value={formMark as any} onChange={e => { const v = e.target.value; setFormMark(v === '' ? '' : Number(v)); setFormGrade(v === '' ? '' : calculateGrade(Number(v))); }} className="w-full px-3 py-2 border rounded-md" />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">Grade</label>
+              <input value={formGrade} readOnly className="w-full px-3 py-2 border rounded-md bg-gray-50" />
             </div>
           </div>
 
-          {/* Results Table */}
-          <div className="bg-white rounded-lg shadow-sm border">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Results for {subjects.find(s => s.code === selectedSubject)?.name}
-              </h2>
-            </div>
-            
+          <div className="flex justify-end gap-3 mt-4">
+            <button onClick={() => { setFormMark(''); setFormGrade(''); setSelectedStudent(''); setEditingResult(null); }} className="px-4 py-2 bg-gray-100 rounded-md">Clear</button>
+            <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-md flex items-center"><Save className="h-4 w-4 mr-2" />{editingResult ? 'Update' : 'Save'}</button>
+          </div>
+
+          <div className="mt-6">
+            <h3 className="font-medium mb-2">Existing Results (Subject)</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Student
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Assignment
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Exam
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Project
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Grade
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Student</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Mark</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Grade</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredResults.map((result) => {
-                    const student = students.find(s => s.uid === result.studentId);
+                  {results.map(r => {
+                    const student = students.find(s => s.uid === r.studentId);
                     return (
-                      <tr key={result.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                                <Users className="h-5 w-5 text-gray-600" />
-                              </div>
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
-                                {student ? `${student.firstName} ${student.lastName}` : 'Unknown Student'}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {student?.studentNumber || 'N/A'}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {result.assignment}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {result.exam}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {result.project}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {result.total}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            result.grade === 'A' ? 'bg-green-100 text-green-800' :
-                            result.grade === 'B' ? 'bg-blue-100 text-blue-800' :
-                            result.grade === 'C' ? 'bg-yellow-100 text-yellow-800' :
-                            result.grade === 'D' ? 'bg-orange-100 text-orange-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {result.grade}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleEdit(result)}
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(result.id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                      <tr key={r.id}>
+                        <td className="px-4 py-2">{student ? `${student.firstName} ${student.lastName}` : 'Unknown'}</td>
+                        <td className="px-4 py-2">{r.mark}</td>
+                        <td className="px-4 py-2">{r.grade}</td>
+                        <td className="px-4 py-2">
+                          <div className="flex gap-2">
+                            <button onClick={() => { setSelectedStudent(r.studentId); setFormMark(Number(r.mark)); setFormGrade(r.grade); setEditingResult(r); }} className="text-blue-600"><Edit /></button>
+                            <button onClick={() => handleDelete(r.id)} className="text-red-600"><Trash2 /></button>
                           </div>
                         </td>
                       </tr>
@@ -409,167 +291,8 @@ const ResultsManagement: React.FC = () => {
               </table>
             </div>
           </div>
-        </>
-      )}
-
-      {/* Add/Edit Result Modal */}
-      {showAddForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {editingResult ? 'Edit Result' : 'Add New Result'}
-                </h3>
-                <button
-                  onClick={() => {
-                    setShowAddForm(false);
-                    setEditingResult(null);
-                    resetForm();
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Student
-                </label>
-                <select
-                  value={formData.studentId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, studentId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="">Select a student</option>
-                  {students.map((student) => (
-                    <option key={student.uid} value={student.uid}>
-                      {student.firstName} {student.lastName} ({student.studentNumber})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Assignment Score
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.assignment}
-                    onChange={(e) => {
-                      setFormData(prev => ({ ...prev, assignment: e.target.value }));
-                      setTimeout(calculateTotal, 100);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Exam Score
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.exam}
-                    onChange={(e) => {
-                      setFormData(prev => ({ ...prev, exam: e.target.value }));
-                      setTimeout(calculateTotal, 100);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Project Score
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.project}
-                    onChange={(e) => {
-                      setFormData(prev => ({ ...prev, project: e.target.value }));
-                      setTimeout(calculateTotal, 100);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Total Score
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.total}
-                    readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Grade
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.grade}
-                    readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Comments
-                </label>
-                <textarea
-                  value={formData.comments}
-                  onChange={(e) => setFormData(prev => ({ ...prev, comments: e.target.value }))}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter any additional comments..."
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddForm(false);
-                    setEditingResult(null);
-                    resetForm();
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {editingResult ? 'Update Result' : 'Create Result'}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

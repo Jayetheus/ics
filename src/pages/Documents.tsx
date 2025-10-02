@@ -3,7 +3,7 @@ import { Upload, FileText, Image, Download, Trash2, Eye, Plus, Search, Filter } 
 import { useAuth } from '../context/AuthContext';
 import { Asset } from '../types';
 import FileUpload from '../components/common/FileUpload';
-import { getAssetsByUploader, deleteAsset } from '../services/appwriteDatabase';
+import { getAssetsByUploader, deleteAsset } from '../services/database';
 import { getFileViewUrl, getFileDownloadUrl, getFilePreviewUrl } from '../services/storage';
 import { useNotification } from '../context/NotificationContext';
 
@@ -39,7 +39,7 @@ const Documents: React.FC = () => {
     fetchDocuments();
   }, [currentUser, addNotification]);
 
-  const handleFileUpload = async (fileData: any) => {
+  const handleFileUpload = async (_fileData: any) => {
     if (!currentUser) return;
 
     try {
@@ -84,20 +84,20 @@ const Documents: React.FC = () => {
     }
   };
 
-  const handleDownload = async (document: Asset) => {
+  const handleDownload = async (asset: Asset) => {
     try {
-      if (document.fileId) {
-        const downloadUrl = getFileDownloadUrl(document.fileId);
+      if (asset.fileId) {
+        const downloadUrl = getFileDownloadUrl(asset.fileId);
         const link = document.createElement('a');
         link.href = downloadUrl;
-        link.download = document.originalName || document.name;
+        link.download = asset.originalName || asset.name;
         link.target = '_blank';
         link.click();
-      } else if (document.url) {
+      } else if (asset.url) {
         // Fallback for old documents with URL
         const link = document.createElement('a');
-        link.href = document.url;
-        link.download = document.originalName || document.name;
+        link.href = asset.url;
+        link.download = asset.originalName || asset.name;
         link.target = '_blank';
         link.click();
       } else {
@@ -113,14 +113,14 @@ const Documents: React.FC = () => {
     }
   };
 
-  const handleView = (document: Asset) => {
+  const handleView = (asset: Asset) => {
     try {
-      if (document.fileId) {
-        const viewUrl = getFileViewUrl(document.fileId);
+      if (asset.fileId) {
+        const viewUrl = getFileViewUrl(asset.fileId);
         window.open(viewUrl, '_blank');
-      } else if (document.url) {
+      } else if (asset.url) {
         // Fallback for old documents with URL
-        window.open(document.url, '_blank');
+        window.open(asset.url, '_blank');
       } else {
         throw new Error('No file available for viewing');
       }
@@ -134,20 +134,20 @@ const Documents: React.FC = () => {
     }
   };
 
-  const getFileDisplayUrl = (document: Asset) => {
-    if (document.fileId) {
-      return getFileViewUrl(document.fileId);
-    } else if (document.url) {
-      return document.url;
+  const getFileDisplayUrl = (asset: Asset) => {
+    if (asset.fileId) {
+      return getFileViewUrl(asset.fileId);
+    } else if (asset.url) {
+      return asset.url;
     }
     return '';
   };
 
-  const getDocumentPreviewUrl = (document: Asset) => {
-    if (document.fileId && document.type.startsWith('image/')) {
-      return getFilePreviewUrl(document.fileId, 400, 400);
+  const getDocumentPreviewUrl = (asset: Asset) => {
+    if (asset.fileId && asset.type.startsWith('image/')) {
+      return getFilePreviewUrl(asset.fileId, 400, 400);
     }
-    return getFileDisplayUrl(document);
+    return getFileDisplayUrl(asset);
   };
 
   const formatFileSize = (bytes: number) => {

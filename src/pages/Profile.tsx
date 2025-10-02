@@ -8,7 +8,7 @@ import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { COLLEGES, COURSES } from '../data/constants';
 import FileUpload from '../components/common/FileUpload';
-import { getAssetsByUploader, deleteAsset } from '../services/appwriteDatabase';
+import { getAssetsByUploader, deleteAsset, createAsset } from '../services/database';
 import { Asset } from '../types';
 import { useNotification } from '../context/NotificationContext';
 
@@ -98,7 +98,7 @@ const Profile: React.FC = () => {
         category: (fileData.type.startsWith('image/') ? 'image' : 'document') as 'image' | 'document' | 'video' | 'other'
       };
 
-      await createAsset(assetData);
+      await createAsset(assetData as any);
       
       // Refresh documents list
       const userDocuments = await getAssetsByUploader(currentUser.uid);
@@ -515,7 +515,7 @@ const Profile: React.FC = () => {
                     View
                   </button>
                   <button
-                    onClick={() => handleDocumentDownload(document.url, document.name)}
+                    onClick={() => handleDocumentDownload(document.url as any, document.name)}
                     className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors"
                   >
                     <Download className="h-3 w-3 mr-1" />

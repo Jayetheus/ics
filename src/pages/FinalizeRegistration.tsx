@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle, BookOpen, CreditCard, User, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import { getApplicationsByStudent, getSubjectsByCourse, enrollStudentSubjects, createStudent, updateFinancesByStudentId } from '../services/database';
+import { getApplicationsByStudent, getSubjectsByCourse, enrollStudentSubjects, getStudentRegistration, updateFinancesByStudentId } from '../services/database';
 import { Subject, Application } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
@@ -15,6 +15,7 @@ const FinalizeRegistration: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [year, setYear] = useState<number>(1);
+  const [registered, setRegistered] = useState(false);
   const [finances, setFinances] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState(false);
@@ -27,7 +28,7 @@ const FinalizeRegistration: React.FC = () => {
         const apps = await getApplicationsByStudent(currentUser.uid);
         const app = apps.find(a => a.status === 'approved') || null;
         setApprovedApp(app);
-        if (app) {
+  if (app) {
           const subs = await getSubjectsByCourse(app.courseCode);
           setSubjects(subs);
           // Pre-select required subjects
@@ -37,6 +38,14 @@ const FinalizeRegistration: React.FC = () => {
           setSelected(defaultSelected);
           const selectedFinances = subs.filter(sub => defaultSelected[sub.code]).map(value=> ({detail: value.code, amount: value.amount}));
           setFinances(selectedFinances);
+        }
+        // Check if student already registered in students collection
+        const reg = await getStudentRegistration(currentUser.uid);
+        if (reg && reg.courseCode) {
+          setRegistered(true);
+          // if registered, default to subject selection step
+          setStep(2);
+          if (reg.year) setYear(reg.year);
         }
       } catch (error) {
         addNotification({

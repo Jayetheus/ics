@@ -5,8 +5,7 @@ import {
   User as UserIcon, Mail, Shield, Clock,
   Image, FolderOpen
 } from 'lucide-react';
-import { getUsers, createUser, updateUser, deleteUser, createLecturer, getColleges } from '../services/database';
-import { getAssetsByUploader, deleteAsset, createAsset } from '../services/appwriteDatabase';
+import { getUsers, createUser, updateUser, deleteUser, createLecturer, getColleges, getAssetsByUploader, deleteAsset, createAsset } from '../services/database';
 import { generateStaffNumber } from '../services/dataLoader';
 import { User, College, Asset } from '../types';
 import { DEPARTMENTS } from '../data/constants';
@@ -199,7 +198,7 @@ const UserManagement: React.FC = () => {
       await createAsset(assetData as any);
       
       // Refresh documents list
-      const documents = await getAssetsByUploader(selectedUser.uid);
+  const documents = await getAssetsByUploader(selectedUser.uid);
       setUserDocuments(documents);
       
       addNotification({
@@ -221,8 +220,8 @@ const UserManagement: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this document?')) return;
 
     try {
-      await deleteAsset(documentId);
-      setUserDocuments(userDocuments.filter(doc => doc.id !== documentId));
+  await deleteAsset(documentId);
+  setUserDocuments(userDocuments.filter(doc => doc.id !== documentId));
       
       addNotification({
         type: 'success',
