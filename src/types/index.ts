@@ -107,6 +107,11 @@ export interface College {
 }
 
 export interface Result {
+  assessmentType: any;
+  assessmentName: any;
+  createdAt: any;
+  createdBy: any;
+  maxMarks: any;
   id: string;
   studentId: string;
   subjectId: string;
