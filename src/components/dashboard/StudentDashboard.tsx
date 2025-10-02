@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { getResultsByStudent, getTimetable, getTimetableByCourse, getPaymentsByStudent, getApplicationsByStudent, getStudentRegistration, getSubjectsByCourse, getFinancesByStudentId, getUserById, getAttendanceRecordsByStudent } from '../../services/database';
+import { getResultsByStudent, getTimetableByCourse, getPaymentsByStudent, getApplicationsByStudent, getStudentRegistration, getSubjectsByCourse, getFinancesByStudentId, getUserById, getAttendanceRecordsByStudent } from '../../services/database';
 import { Result, Timetable, Payment, Application, AttendanceRecord } from '../../types';
 import { SkeletonDashboard } from '../common/Skeleton';
 

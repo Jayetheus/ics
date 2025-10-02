@@ -152,7 +152,7 @@ export const useFormValidation = (initialData: any, validationRules: { [key: str
   }, [data, validationRules]);
 
   const handleChange = React.useCallback((field: string, value: any) => {
-    setData(prev => ({ ...prev, [field]: value }));
+    setData((prev: any) => ({ ...prev, [field]: value }));
     
     // Clear error when user starts typing
     if (errors[field]) {

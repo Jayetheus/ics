@@ -78,11 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...additionalData,
       createdAt: new Date().toISOString(),
     };
-
-    if(role === 'student'){
-
-    }
-
+    
     await setDoc(doc(db, 'users', user.uid), userData);
   };
 

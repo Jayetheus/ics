@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, File, Image, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, X, File, Image, FileText } from 'lucide-react';
 import { uploadFile } from '../../services/storage';
 import { createAsset } from '../../services/appwriteDatabase';
 import { useNotification } from '../../context/NotificationContext';

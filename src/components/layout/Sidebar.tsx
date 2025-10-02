@@ -8,7 +8,6 @@ import {
   HelpCircle, 
   FileText, 
   Calendar,
-  Settings,
   BarChart3,
   Upload,
   User,

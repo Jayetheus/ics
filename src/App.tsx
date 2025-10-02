@@ -223,7 +223,6 @@ const AppContent: React.FC = () => {
 };
 
 function App() {
-  console.log("App component rendered");
 
   return (
     <ErrorBoundary>

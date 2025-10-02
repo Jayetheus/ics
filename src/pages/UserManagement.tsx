@@ -6,7 +6,7 @@ import {
   Image, FolderOpen
 } from 'lucide-react';
 import { getUsers, createUser, updateUser, deleteUser, createLecturer, getColleges } from '../services/database';
-import { getAssetsByUploader, deleteAsset } from '../services/appwriteDatabase';
+import { getAssetsByUploader, deleteAsset, createAsset } from '../services/appwriteDatabase';
 import { generateStaffNumber } from '../services/dataLoader';
 import { User, College, Asset } from '../types';
 import { DEPARTMENTS } from '../data/constants';
@@ -65,11 +65,11 @@ const UserManagement: React.FC = () => {
 
   const filteredUsers = allUsers.filter(user => {
     const matchesSearch =
-      user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.firstName?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
 
       
-      user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      user.lastName?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm?.toLowerCase());
     const matchesFilter = filterRole === 'all' || user.role === filterRole;
     return matchesSearch && matchesFilter;
   });
@@ -196,7 +196,7 @@ const UserManagement: React.FC = () => {
         category: (fileData.type.startsWith('image/') ? 'image' : 'document') as 'image' | 'document' | 'video' | 'other'
       };
 
-      await createAsset(assetData);
+      await createAsset(assetData as any);
       
       // Refresh documents list
       const documents = await getAssetsByUploader(selectedUser.uid);
@@ -824,7 +824,7 @@ const UserManagement: React.FC = () => {
                             View
                           </button>
                           <button
-                            onClick={() => handleDocumentDownload(document.url, document.name)}
+                            onClick={() => handleDocumentDownload(document.url as any, document.name)}
                             className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors"
                           >
                             <Download className="h-3 w-3 mr-1" />
