@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, Search, Filter, Plus, Edit, Eye, Trash2, Download, Loader2, 
-  FileText, Upload, X, Phone, MapPin, GraduationCap, 
-  User as UserIcon, Mail, Shield, Clock,
-  Image, FolderOpen
-} from 'lucide-react';
+import { Users, Search, ListFilter as Filter, Plus, CreditCard as Edit, Eye, Trash2, Download, Loader as Loader2, FileText, Upload, X, Phone, MapPin, GraduationCap, User as UserIcon, Mail, Shield, Clock, Image, FolderOpen } from 'lucide-react';
 import { getUsers, createUser, updateUser, deleteUser, createLecturer, getColleges, generateStaffNumber } from '../services/database';
 import { getAssetsByUploader, deleteAsset, createAsset } from '../services/appwriteDatabase';
 import { getFileViewUrl, getFileDownloadUrl } from '../services/storage';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, Image, Download, Trash2, Eye, Plus, Search, Filter } from 'lucide-react';
+import { Upload, FileText, Image, Download, Trash2, Eye, Plus, Search, ListFilter as Filter } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Asset } from '../types';
 import FileUpload from '../components/common/FileUpload';

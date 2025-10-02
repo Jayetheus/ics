@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  User, Mail, Phone, MapPin, Calendar, Save, Edit, 
-  FileText, Download, Trash2, Eye, Image, FolderOpen, Plus
-} from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Save, CreditCard as Edit, FileText, Download, Trash2, Eye, Image, FolderOpen, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
