@@ -84,20 +84,20 @@ const Documents: React.FC = () => {
     }
   };
 
-  const handleDownload = async (document: Asset) => {
+  const handleDownload = async (doc: Asset) => {
     try {
-      if (document.fileId) {
-        const downloadUrl = getFileDownloadUrl(document.fileId);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = document.originalName || document.name;
+      if (doc.fileId) {
+        const downloadUrl = getFileDownloadUrl(doc.fileId);
+        const link = window.document.createElement('a');
+        link.href = downloadUrl.toString();
+        link.download = doc.originalName || doc.name;
         link.target = '_blank';
         link.click();
-      } else if (document.url) {
+      } else if (doc.url) {
         // Fallback for old documents with URL
-        const link = document.createElement('a');
-        link.href = document.url;
-        link.download = document.originalName || document.name;
+        const link = window.document.createElement('a');
+        link.href = doc.url;
+        link.download = doc.originalName || doc.name;
         link.target = '_blank';
         link.click();
       } else {
@@ -113,14 +113,14 @@ const Documents: React.FC = () => {
     }
   };
 
-  const handleView = (document: Asset) => {
+  const handleView = (doc: Asset) => {
     try {
-      if (document.fileId) {
-        const viewUrl = getFileViewUrl(document.fileId);
-        window.open(viewUrl, '_blank');
-      } else if (document.url) {
+      if (doc.fileId) {
+        const viewUrl = getFileViewUrl(doc.fileId);
+        window.open(viewUrl.toString(), '_blank');
+      } else if (doc.url) {
         // Fallback for old documents with URL
-        window.open(document.url, '_blank');
+        window.open(doc.url, '_blank');
       } else {
         throw new Error('No file available for viewing');
       }
@@ -134,20 +134,20 @@ const Documents: React.FC = () => {
     }
   };
 
-  const getFileDisplayUrl = (document: Asset) => {
-    if (document.fileId) {
-      return getFileViewUrl(document.fileId);
-    } else if (document.url) {
-      return document.url;
+  const getFileDisplayUrl = (doc: Asset) => {
+    if (doc.fileId) {
+      return getFileViewUrl(doc.fileId).toString();
+    } else if (doc.url) {
+      return doc.url;
     }
     return '';
   };
 
-  const getDocumentPreviewUrl = (document: Asset) => {
-    if (document.fileId && document.type.startsWith('image/')) {
-      return getFilePreviewUrl(document.fileId, 400, 400);
+  const getDocumentPreviewUrl = (doc: Asset) => {
+    if (doc.fileId && doc.type.startsWith('image/')) {
+      return getFilePreviewUrl(doc.fileId, 400, 400).toString();
     }
-    return getFileDisplayUrl(document);
+    return getFileDisplayUrl(doc);
   };
 
   const formatFileSize = (bytes: number) => {

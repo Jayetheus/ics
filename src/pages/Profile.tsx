@@ -90,7 +90,9 @@ const Profile: React.FC = () => {
   };
 
   const handlePhotoUpload = (fileData: any) => {
-    setProfileData({ ...profileData, photoUrl: fileData.url });
+    // Get the view URL from the fileId if available
+    const photoUrl = fileData.fileId ? getFileViewUrl(fileData.fileId).toString() : '';
+    setProfileData({ ...profileData, photoUrl });
   };
 
   // Load user documents
@@ -126,7 +128,6 @@ const Profile: React.FC = () => {
         name: fileData.name,
         originalName: fileData.originalName || fileData.name,
         type: fileData.type,
-        url: fileData.url,
         fileId: fileData.fileId,
         bucketId: fileData.bucketId,
         uploadedBy: currentUser.uid,
@@ -177,20 +178,20 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleDocumentDownload = async (document: Asset) => {
+  const handleDocumentDownload = async (doc: Asset) => {
     try {
-      if (document.fileId) {
-        const downloadUrl = getFileDownloadUrl(document.fileId);
+      if (doc.fileId) {
+        const downloadUrl = getFileDownloadUrl(doc.fileId);
         const link = window.document.createElement('a');
-        link.href = downloadUrl;
-        link.download = document.originalName || document.name;
+        link.href = downloadUrl.toString();
+        link.download = doc.originalName || doc.name;
         link.target = '_blank';
         link.click();
-      } else if (document.url) {
+      } else if (doc.url) {
         // Fallback for old documents with URL
         const link = window.document.createElement('a');
-        link.href = document.url;
-        link.download = document.originalName || document.name;
+        link.href = doc.url;
+        link.download = doc.originalName || doc.name;
         link.target = '_blank';
         link.click();
       } else {
@@ -206,14 +207,14 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleDocumentView = (document: Asset) => {
+  const handleDocumentView = (doc: Asset) => {
     try {
-      if (document.fileId) {
-        const viewUrl = getFileViewUrl(document.fileId);
-        window.open(viewUrl, '_blank');
-      } else if (document.url) {
+      if (doc.fileId) {
+        const viewUrl = getFileViewUrl(doc.fileId);
+        window.open(viewUrl.toString(), '_blank');
+      } else if (doc.url) {
         // Fallback for old documents with URL
-        window.open(document.url, '_blank');
+        window.open(doc.url, '_blank');
       } else {
         throw new Error('No file available for viewing');
       }

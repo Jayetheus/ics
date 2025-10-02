@@ -247,7 +247,7 @@ const UserManagement: React.FC = () => {
       if (asset.fileId) {
         const downloadUrl = getFileDownloadUrl(asset.fileId);
         const link = window.document.createElement('a');
-        link.href = downloadUrl;
+        link.href = downloadUrl.toString();
         link.download = asset.originalName || asset.name;
         link.target = '_blank';
         link.click();
@@ -275,7 +275,7 @@ const UserManagement: React.FC = () => {
     try {
       if (asset.fileId) {
         const viewUrl = getFileViewUrl(asset.fileId);
-        window.open(viewUrl, '_blank');
+        window.open(viewUrl.toString(), '_blank');
       } else if (asset.url) {
         // Fallback for old documents with URL
         window.open(asset.url, '_blank');
