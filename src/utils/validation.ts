@@ -221,7 +221,7 @@ export const validatePassword = (password: string): boolean => {
 };
 
 export const validatePhoneNumber = (phone: string): boolean => {
-  // Support various phone number formats
-  const phonePattern = /^(\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})$/;
+  // South African phone number format
+  const phonePattern = /^(\+27|0)[0-9]{9}$/;
   return phonePattern.test(phone.replace(/\s/g, ''));
 };

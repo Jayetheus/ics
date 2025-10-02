@@ -35,10 +35,9 @@ describe('Validation Utils', () => {
 
   describe('validatePhoneNumber', () => {
     it('should validate correct phone numbers', () => {
-      expect(validatePhoneNumber('+1234567890')).toBe(true);
-      expect(validatePhoneNumber('123-456-7890')).toBe(true);
-      expect(validatePhoneNumber('(123) 456-7890')).toBe(true);
-      expect(validatePhoneNumber('1234567890')).toBe(true);
+      expect(validatePhoneNumber('+27831234567')).toBe(true);
+      expect(validatePhoneNumber('0831234567')).toBe(true);
+      expect(validatePhoneNumber('083 123 4567')).toBe(true);
     });
 
     it('should reject invalid phone numbers', () => {
@@ -46,6 +45,11 @@ describe('Validation Utils', () => {
       expect(validatePhoneNumber('abc-def-ghij')).toBe(false);
       expect(validatePhoneNumber('')).toBe(false);
       expect(validatePhoneNumber('123-45-6789')).toBe(false);
+      expect(validatePhoneNumber('123456789')).toBe(false); // Too short
+      expect(validatePhoneNumber('123456789012')).toBe(false); // Too long
+      expect(validatePhoneNumber('+1234567890')).toBe(false); // US format, should fail for SA validation
+      expect(validatePhoneNumber('083123456')).toBe(false); // Too short for SA format
+      expect(validatePhoneNumber('08312345678')).toBe(false); // Too long for SA format
     });
   });
 });

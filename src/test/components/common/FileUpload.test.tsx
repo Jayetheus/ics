@@ -8,10 +8,17 @@ vi.mock('../../../services/storage', () => ({
   uploadFile: vi.fn().mockResolvedValue({
     id: 'test-file-id',
     name: 'test-file.pdf',
+    originalName: 'test-file.pdf',
     url: 'https://example.com/test-file.pdf',
     size: 1024,
-    type: 'application/pdf'
+    type: 'application/pdf',
+    bucketId: 'test-bucket'
   })
+}));
+
+// Mock the appwrite database service
+vi.mock('../../../services/appwriteDatabase', () => ({
+  createAsset: vi.fn().mockResolvedValue('asset-id-123')
 }));
 
 // Mock the notification context
@@ -53,11 +60,14 @@ describe('FileUpload', () => {
     
     await waitFor(() => {
       expect(mockOnUpload).toHaveBeenCalledWith({
-        id: 'test-file-id',
+        id: 'asset-id-123',
         name: 'test-file.pdf',
+        originalName: 'test-file.pdf',
         url: 'https://example.com/test-file.pdf',
         size: 1024,
-        type: 'application/pdf'
+        type: 'application/pdf',
+        bucketId: 'test-bucket',
+        category: 'document'
       });
     });
   });

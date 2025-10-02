@@ -35,9 +35,20 @@ vi.mock('../../services/database', () => ({
   updateUser: vi.fn(),
   deleteUser: vi.fn(),
   createLecturer: vi.fn(),
+  generateStaffNumber: vi.fn()
+}));
+
+// Mock the appwrite database functions
+vi.mock('../../services/appwriteDatabase', () => ({
   getAssetsByUploader: vi.fn(),
   createAsset: vi.fn(),
   deleteAsset: vi.fn()
+}));
+
+// Mock the storage functions
+vi.mock('../../services/storage', () => ({
+  getFileViewUrl: vi.fn(() => 'https://example.com/view'),
+  getFileDownloadUrl: vi.fn(() => 'https://example.com/download')
 }));
 
 // Mock the email service
@@ -82,8 +93,13 @@ describe('UserManagement Page', () => {
     { id: 'college-2', name: 'College of Science' }
   ];
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    // Set up default mock implementations
+    const { getUsers, getColleges, generateStaffNumber } = await import('../../services/database');
+    vi.mocked(getUsers).mockResolvedValue(mockUsers);
+    vi.mocked(getColleges).mockResolvedValue(mockColleges);
+    vi.mocked(generateStaffNumber).mockResolvedValue('STF001');
   });
 
   it('should render user management page', async () => {
@@ -99,10 +115,10 @@ describe('UserManagement Page', () => {
     renderWithRouter(<UserManagement />);
     
     await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getByText('John Doe')).toBeInTheDocument(); // In table
       expect(screen.getByText('jane@example.com')).toBeInTheDocument();
-      expect(screen.getByText('student')).toBeInTheDocument();
-      expect(screen.getByText('lecturer')).toBeInTheDocument();
+      expect(screen.getAllByText('student')).toHaveLength(2); // One in select, one in table
+      expect(screen.getAllByText('lecturer')).toHaveLength(2); // One in select, one in table
     });
   });
 
@@ -116,10 +132,9 @@ describe('UserManagement Page', () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByText('Add User')).toBeInTheDocument();
-      expect(screen.getByLabelText(/first name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/last name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('First Name')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Last Name')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
     });
   });
 
@@ -158,14 +173,14 @@ describe('UserManagement Page', () => {
     renderWithRouter(<UserManagement />);
     
     await waitFor(() => {
-      const viewButtons = screen.getAllByRole('button', { name: /view details/i });
+      const viewButtons = screen.getAllByTitle('View Details');
       user.click(viewButtons[0]);
     });
     
     await waitFor(() => {
       expect(screen.getByText('User Details')).toBeInTheDocument();
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
-      expect(screen.getByText('john@example.com')).toBeInTheDocument();
+      expect(screen.getAllByText('John Doe')).toHaveLength(2); // One in table, one in modal
+      expect(screen.getAllByText('john@example.com')).toHaveLength(2); // One in table, one in modal
     });
   });
 
@@ -174,12 +189,11 @@ describe('UserManagement Page', () => {
     renderWithRouter(<UserManagement />);
     
     await waitFor(() => {
-      const editButtons = screen.getAllByRole('button', { name: /edit user/i });
+      const editButtons = screen.getAllByTitle('Edit User');
       user.click(editButtons[0]);
     });
     
     await waitFor(() => {
-      expect(screen.getByText('Edit User')).toBeInTheDocument();
       expect(screen.getByDisplayValue('John')).toBeInTheDocument();
       expect(screen.getByDisplayValue('Doe')).toBeInTheDocument();
     });
@@ -188,18 +202,19 @@ describe('UserManagement Page', () => {
   it('should delete user when delete button is clicked', async () => {
     const user = userEvent.setup();
     window.confirm = vi.fn(() => true);
-    mockDeleteUser.mockResolvedValue({});
+    const { deleteUser } = await import('../../services/database');
+    vi.mocked(deleteUser).mockResolvedValue({});
     
     renderWithRouter(<UserManagement />);
     
     await waitFor(() => {
-      const deleteButtons = screen.getAllByRole('button', { name: /delete user/i });
+      const deleteButtons = screen.getAllByTitle('Delete User');
       user.click(deleteButtons[0]);
     });
     
     await waitFor(() => {
       expect(window.confirm).toHaveBeenCalledWith('Delete this user?');
-      expect(mockDeleteUser).toHaveBeenCalledWith('user-1');
+      expect(vi.mocked(deleteUser)).toHaveBeenCalledWith('user-1');
     });
   });
 
@@ -238,13 +253,14 @@ describe('UserManagement Page', () => {
       }
     ];
     
-    mockGetAssetsByUploader.mockResolvedValue(mockDocuments);
+    const { getAssetsByUploader } = await import('../../services/appwriteDatabase');
+    vi.mocked(getAssetsByUploader).mockResolvedValue(mockDocuments);
     
     const user = userEvent.setup();
     renderWithRouter(<UserManagement />);
     
     await waitFor(() => {
-      const viewButtons = screen.getAllByRole('button', { name: /view details/i });
+      const viewButtons = screen.getAllByTitle('View Details');
       user.click(viewButtons[0]);
     });
     

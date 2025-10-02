@@ -58,46 +58,70 @@ const renderWithRouter = (component: React.ReactElement) => {
 };
 
 describe('StudentAttendance Page', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    
+    // Set up default mock implementations
+    const { getAttendanceRecordsByStudent, createAttendanceRecord, checkStudentAttendance } = await import('../../services/database');
+    const { parseQRCode, isQRCodeExpired } = await import('../../utils/qrCodeUtils');
+    
+    vi.mocked(getAttendanceRecordsByStudent).mockResolvedValue([]);
+    vi.mocked(createAttendanceRecord).mockResolvedValue({});
+    vi.mocked(checkStudentAttendance).mockResolvedValue(false);
+    vi.mocked(parseQRCode).mockReturnValue({ studentId: 'test-student-id', classId: 'test-class-id' });
+    vi.mocked(isQRCodeExpired).mockReturnValue(false);
   });
 
-  it('should render attendance page', () => {
+  it('should render attendance page', async () => {
     renderWithRouter(<StudentAttendance />);
     
-    expect(screen.getByText('Student Attendance')).toBeInTheDocument();
-    expect(screen.getByText('Mark Your Attendance')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Attendance')).toBeInTheDocument();
+      expect(screen.getByText('Scan QR codes to mark your attendance')).toBeInTheDocument();
+    });
   });
 
-  it('should show scan QR code button', () => {
+  it('should show scan QR code button', async () => {
     renderWithRouter(<StudentAttendance />);
     
-    const scanButton = screen.getByRole('button', { name: /scan qr code/i });
-    expect(scanButton).toBeInTheDocument();
+    await waitFor(() => {
+      const scanButton = screen.getByRole('button', { name: /scan qr code/i });
+      expect(scanButton).toBeInTheDocument();
+    });
   });
 
   it('should open QR scanner modal when scan button is clicked', async () => {
     const user = userEvent.setup();
     renderWithRouter(<StudentAttendance />);
     
-    const scanButton = screen.getByRole('button', { name: /scan qr code/i });
-    await user.click(scanButton);
+    await waitFor(() => {
+      const scanButton = screen.getByRole('button', { name: /scan qr code/i });
+      user.click(scanButton);
+    });
     
-    expect(screen.getByText('Scan QR Code')).toBeInTheDocument();
-    expect(screen.getByTestId('qr-scanner')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getAllByText('Scan QR Code')).toHaveLength(2); // Button and modal title
+      expect(screen.getByTestId('qr-scanner')).toBeInTheDocument();
+    });
   });
 
   it('should close QR scanner modal when close button is clicked', async () => {
     const user = userEvent.setup();
     renderWithRouter(<StudentAttendance />);
     
-    const scanButton = screen.getByRole('button', { name: /scan qr code/i });
-    await user.click(scanButton);
+    await waitFor(() => {
+      const scanButton = screen.getByRole('button', { name: /scan qr code/i });
+      user.click(scanButton);
+    });
     
-    const closeButton = screen.getByRole('button', { name: /close/i });
-    await user.click(closeButton);
+    await waitFor(() => {
+      const closeButton = screen.getByRole('button', { name: /close/i });
+      user.click(closeButton);
+    });
     
-    expect(screen.queryByText('Scan QR Code')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByTestId('qr-scanner')).not.toBeInTheDocument();
+    });
   });
 
   it('should display attendance records', async () => {
@@ -111,17 +135,19 @@ describe('StudentAttendance Page', () => {
       }
     ];
     
-    mockGetAttendanceRecordsByStudent.mockResolvedValue(mockRecords);
+    const { getAttendanceRecordsByStudent } = await import('../../services/database');
+    vi.mocked(getAttendanceRecordsByStudent).mockResolvedValue(mockRecords);
     
     renderWithRouter(<StudentAttendance />);
     
     await waitFor(() => {
-      expect(screen.getByText('Attendance Records')).toBeInTheDocument();
+      expect(screen.getByText('Your Attendance Records')).toBeInTheDocument();
     });
   });
 
   it('should show empty state when no attendance records', async () => {
-    mockGetAttendanceRecordsByStudent.mockResolvedValue([]);
+    const { getAttendanceRecordsByStudent } = await import('../../services/database');
+    vi.mocked(getAttendanceRecordsByStudent).mockResolvedValue([]);
     
     renderWithRouter(<StudentAttendance />);
     
@@ -140,20 +166,25 @@ describe('StudentAttendance Page', () => {
       type: 'attendance'
     });
     isQRCodeExpired.mockReturnValue(false);
-    mockCheckStudentAttendance.mockResolvedValue(false);
-    mockCreateAttendanceRecord.mockResolvedValue({});
+    const { checkStudentAttendance, createAttendanceRecord } = await import('../../services/database');
+    vi.mocked(checkStudentAttendance).mockResolvedValue(false);
+    vi.mocked(createAttendanceRecord).mockResolvedValue({});
     
     renderWithRouter(<StudentAttendance />);
     
-    const scanButton = screen.getByRole('button', { name: /scan qr code/i });
-    await user.click(scanButton);
+    await waitFor(() => {
+      const scanButton = screen.getByRole('button', { name: /scan qr code/i });
+      user.click(scanButton);
+    });
     
-    const qrScanner = screen.getByTestId('qr-scanner');
-    await user.click(qrScanner);
+    await waitFor(() => {
+      const qrScanner = screen.getByTestId('qr-scanner');
+      user.click(qrScanner);
+    });
     
     await waitFor(() => {
       expect(parseQRCode).toHaveBeenCalledWith('test-qr-data');
-      expect(mockCheckStudentAttendance).toHaveBeenCalledWith('session-123', 'test-student-id');
+      expect(vi.mocked(checkStudentAttendance)).toHaveBeenCalledWith('session-123', 'test-student-id');
     });
   });
 
@@ -161,15 +192,19 @@ describe('StudentAttendance Page', () => {
     const user = userEvent.setup();
     const { parseQRCode } = await import('../../utils/qrCodeUtils');
     
-    parseQRCode.mockReturnValue(null);
+    vi.mocked(parseQRCode).mockReturnValue(null);
     
     renderWithRouter(<StudentAttendance />);
     
-    const scanButton = screen.getByRole('button', { name: /scan qr code/i });
-    await user.click(scanButton);
+    await waitFor(() => {
+      const scanButton = screen.getByRole('button', { name: /scan qr code/i });
+      user.click(scanButton);
+    });
     
-    const qrScanner = screen.getByTestId('qr-scanner');
-    await user.click(qrScanner);
+    await waitFor(() => {
+      const qrScanner = screen.getByTestId('qr-scanner');
+      user.click(qrScanner);
+    });
     
     await waitFor(() => {
       expect(mockAddNotification).toHaveBeenCalledWith({
@@ -184,20 +219,24 @@ describe('StudentAttendance Page', () => {
     const user = userEvent.setup();
     const { parseQRCode, isQRCodeExpired } = await import('../../utils/qrCodeUtils');
     
-    parseQRCode.mockReturnValue({
+    vi.mocked(parseQRCode).mockReturnValue({
       sessionId: 'session-123',
       timestamp: Date.now(),
       type: 'attendance'
     });
-    isQRCodeExpired.mockReturnValue(true);
+    vi.mocked(isQRCodeExpired).mockReturnValue(true);
     
     renderWithRouter(<StudentAttendance />);
     
-    const scanButton = screen.getByRole('button', { name: /scan qr code/i });
-    await user.click(scanButton);
+    await waitFor(() => {
+      const scanButton = screen.getByRole('button', { name: /scan qr code/i });
+      user.click(scanButton);
+    });
     
-    const qrScanner = screen.getByTestId('qr-scanner');
-    await user.click(qrScanner);
+    await waitFor(() => {
+      const qrScanner = screen.getByTestId('qr-scanner');
+      user.click(qrScanner);
+    });
     
     await waitFor(() => {
       expect(mockAddNotification).toHaveBeenCalledWith({
