@@ -78,8 +78,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...additionalData,
       createdAt: new Date().toISOString(),
     };
-    
-    await setDoc(doc(db, 'users', user.uid), userData);
+
+  // Create user document using auth UID; use merge to be safe if a doc exists
+  await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
   };
 
   const logout = async () => {

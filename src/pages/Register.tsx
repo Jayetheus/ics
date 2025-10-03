@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
-import { generateStudentNumber } from '../services/dataLoader';
+import { generateStudentNumber } from '../services/database';
 import { Eye, EyeOff, AlertCircle, CheckCircle, User, Mail, Lock, Phone, IdCard, BookOpen, GraduationCap } from 'lucide-react';
 
 const Register: React.FC = () => {

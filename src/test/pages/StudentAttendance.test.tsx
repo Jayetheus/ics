@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import StudentAttendance from '../../pages/StudentAttendance';
 
@@ -27,11 +27,15 @@ vi.mock('../../context/NotificationContext', () => ({
   })
 }));
 
-// Mock the database functions
+// Mock the database functions (named mocks so tests can reference them)
+const mockGetAttendanceRecordsByStudent = vi.fn();
+const mockCreateAttendanceRecord = vi.fn();
+const mockCheckStudentAttendance = vi.fn();
+
 vi.mock('../../services/database', () => ({
-  getAttendanceRecordsByStudent: vi.fn(),
-  createAttendanceRecord: vi.fn(),
-  checkStudentAttendance: vi.fn()
+  getAttendanceRecordsByStudent: mockGetAttendanceRecordsByStudent,
+  createAttendanceRecord: mockCreateAttendanceRecord,
+  checkStudentAttendance: mockCheckStudentAttendance
 }));
 
 // Mock QR code utilities
@@ -134,12 +138,12 @@ describe('StudentAttendance Page', () => {
     const user = userEvent.setup();
     const { parseQRCode, isQRCodeExpired } = await import('../../utils/qrCodeUtils');
     
-    parseQRCode.mockReturnValue({
+    (parseQRCode as Mock).mockReturnValue({
       sessionId: 'session-123',
       timestamp: Date.now(),
       type: 'attendance'
     });
-    isQRCodeExpired.mockReturnValue(false);
+    (isQRCodeExpired as Mock).mockReturnValue(false);
     mockCheckStudentAttendance.mockResolvedValue(false);
     mockCreateAttendanceRecord.mockResolvedValue({});
     
@@ -161,7 +165,7 @@ describe('StudentAttendance Page', () => {
     const user = userEvent.setup();
     const { parseQRCode } = await import('../../utils/qrCodeUtils');
     
-    parseQRCode.mockReturnValue(null);
+    (parseQRCode as Mock).mockReturnValue(null);
     
     renderWithRouter(<StudentAttendance />);
     
@@ -184,12 +188,12 @@ describe('StudentAttendance Page', () => {
     const user = userEvent.setup();
     const { parseQRCode, isQRCodeExpired } = await import('../../utils/qrCodeUtils');
     
-    parseQRCode.mockReturnValue({
+    (parseQRCode as Mock).mockReturnValue({
       sessionId: 'session-123',
       timestamp: Date.now(),
       type: 'attendance'
     });
-    isQRCodeExpired.mockReturnValue(true);
+    (isQRCodeExpired as Mock).mockReturnValue(true);
     
     renderWithRouter(<StudentAttendance />);
     

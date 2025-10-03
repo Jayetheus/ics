@@ -15,7 +15,7 @@ import { Course, Subject, User, Result } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const ResultsManagement: React.FC = () => {
-  useAuth();
+  const { currentUser } = useAuth();
   const { addNotification } = useNotification();
 
   const [loading, setLoading] = useState(true);
@@ -192,9 +192,9 @@ const ResultsManagement: React.FC = () => {
         percentage: maxMarks > 0 ? (markNum / maxMarks) * 100 : 0
       }),
       createdAt: editingResult ? editingResult.createdAt : new Date().toISOString(),
-      createdBy: editingResult ? editingResult.createdBy : 'current-user-id', // Replace with actual user ID
+      createdBy: editingResult ? editingResult.createdBy : currentUser?.uid, // Replace with actual user ID
       lastModified: new Date().toISOString(),
-      lastModifiedBy: 'current-user-id' // Replace with actual user ID
+      lastModifiedBy: currentUser?.uid // Replace with actual user ID
     } as any;
 
     try {

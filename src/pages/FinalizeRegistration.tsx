@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle, BookOpen, CreditCard, User, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import { getApplicationsByStudent, getSubjectsByCourse, enrollStudentSubjects, getStudentRegistration, updateFinancesByStudentId } from '../services/database';
+import { getApplicationsByStudent, getSubjectsByCourse, enrollStudentSubjects, getStudentRegistration, updateFinancesByStudentId, registerStudent } from '../services/database';
 import { Subject, Application } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+
 
 const FinalizeRegistration: React.FC = () => {
   const { currentUser } = useAuth();
@@ -28,7 +29,7 @@ const FinalizeRegistration: React.FC = () => {
         const apps = await getApplicationsByStudent(currentUser.uid);
         const app = apps.find(a => a.status === 'approved') || null;
         setApprovedApp(app);
-  if (app) {
+        if (app) {
           const subs = await getSubjectsByCourse(app.courseCode);
           setSubjects(subs);
           // Pre-select required subjects
@@ -36,12 +37,12 @@ const FinalizeRegistration: React.FC = () => {
             subs.map(s => [s.code, s.credits >= 6]) // Auto-select major subjects
           );
           setSelected(defaultSelected);
-          const selectedFinances = subs.filter(sub => defaultSelected[sub.code]).map(value=> ({detail: value.code, amount: value.amount}));
+          const selectedFinances = subs.filter(sub => defaultSelected[sub.code]).map(value => ({ detail: value.code, amount: value.amount }));
           setFinances(selectedFinances);
         }
         // Check if student already registered in students collection
         const reg = await getStudentRegistration(currentUser.uid);
-        if (reg && reg.courseCode) {
+        if (reg && reg.course) {
           setRegistered(true);
           // if registered, default to subject selection step
           setStep(2);
@@ -63,7 +64,7 @@ const FinalizeRegistration: React.FC = () => {
   const toggle = (code: string) => {
     const updatedSelected = ({ ...selected, [code]: !selected[code] });
     setSelected(prev => ({ ...prev, [code]: !prev[code] }));
-    const selectedFinances = subjects.filter(sub => updatedSelected[sub.code]).map(value=> ({detail: value.code, amount: value.amount}));
+    const selectedFinances = subjects.filter(sub => updatedSelected[sub.code]).map(value => ({ detail: value.code, amount: value.amount }));
     setFinances(selectedFinances)
   }
 
@@ -81,12 +82,13 @@ const FinalizeRegistration: React.FC = () => {
       return;
     }
 
-    const updatedFinances = [...finances, {detail: `${new Date().getFullYear()} registration fee`, amount: 1500}]
+    const updatedFinances = [...finances, { detail: `${new Date().getFullYear()} registration fee`, amount: 1500 }]
 
     try {
       setFinalizing(true);
       await enrollStudentSubjects(currentUser.uid, chosen);
       await updateFinancesByStudentId(currentUser.uid, updatedFinances);
+      await registerStudent(currentUser, approvedApp)
 
       addNotification({
         type: 'success',
@@ -197,8 +199,8 @@ const FinalizeRegistration: React.FC = () => {
                 key={yearOption}
                 onClick={() => setYear(yearOption)}
                 className={`p-4 border-2 rounded-lg text-center transition-colors ${year === yearOption
-                    ? 'border-blue-600 bg-blue-50 text-blue-900'
-                    : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-blue-600 bg-blue-50 text-blue-900'
+                  : 'border-gray-200 hover:border-gray-300'
                   }`}
               >
                 <div className="text-2xl font-bold">{yearOption}</div>
@@ -232,7 +234,7 @@ const FinalizeRegistration: React.FC = () => {
               Total Credits: <span className="font-semibold">{totalCredits}</span>
             </div>
             <div className="text-sm text-gray-600">
-              Total Price: R<span className="font-semibold">{finances.map(fin => fin.amount).reduce((acc, cur)=> acc+cur, 0) }</span>
+              Total Price: R<span className="font-semibold">{finances.map(fin => fin.amount).reduce((acc, cur) => acc + cur, 0)}</span>
             </div>
           </div>
 
@@ -241,8 +243,8 @@ const FinalizeRegistration: React.FC = () => {
               <label
                 key={s.id}
                 className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${selected[s.code]
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-blue-600 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
                   }`}
               >
                 <input
@@ -296,7 +298,7 @@ const FinalizeRegistration: React.FC = () => {
                   <div><span className="text-gray-600">Year:</span> {year}</div>
                   <div><span className="text-gray-600">Registration: R </span>1500</div>
                   <div><span className="text-gray-600">Total Credits:</span> {totalCredits}</div>
-                  <div><span className="text-gray-600">Total Amount:R </span> {finances.map(fin => fin.amount).reduce((acc, cur)=> acc+cur, 0)+1500 }</div>
+                  <div><span className="text-gray-600">Total Amount:R </span> {finances.map(fin => fin.amount).reduce((acc, cur) => acc + cur, 0) + 1500}</div>
                 </div>
               </div>
 
@@ -362,6 +364,4 @@ const FinalizeRegistration: React.FC = () => {
 };
 
 export default FinalizeRegistration;
-
-
 

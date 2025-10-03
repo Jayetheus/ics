@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, User, Download, Filter } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getTimetable, getTimetableByCourse, getStudentRegistration } from '../services/database';
+import {getTimetableByCourse, getStudentRegistration } from '../services/database';
 import { Timetable as TimetableType } from '../types';
 
 const Timetable: React.FC = () => {
@@ -19,10 +19,10 @@ const Timetable: React.FC = () => {
         setLoading(true);
         // Get student's course registration
         const registration = await getStudentRegistration(currentUser.uid);
-        
+        console.log(registration)
         if (registration?.courseCode) {
           // Get timetable for the student's specific course
-          const timetableData = await getTimetableByCourse(registration.courseCode);
+          const timetableData = await getTimetableByCourse(registration.course);
           setTimetable(timetableData);
         } else {
           // If no course registered, show empty timetable
@@ -171,7 +171,7 @@ const Timetable: React.FC = () => {
                               </div>
                               <div className="flex items-center text-xs opacity-75">
                                 <User className="h-3 w-3 mr-1" />
-                                {classItem.lecturer}
+                                {classItem.lecturerId}
                               </div>
                               <div className="flex items-center text-xs opacity-75">
                                 <Clock className="h-3 w-3 mr-1" />
@@ -227,7 +227,7 @@ const Timetable: React.FC = () => {
                               </div>
                               <div className="flex items-center">
                                 <User className="h-4 w-4 mr-2" />
-                                {classItem.lecturer}
+                                {classItem.lecturerId}
                               </div>
                             </div>
                           </div>

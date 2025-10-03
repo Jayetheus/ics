@@ -14,6 +14,12 @@ vi.mock('../../../services/storage', () => ({
   })
 }));
 
+// Mock the database createAsset used by the component
+const mockCreateAsset = vi.fn().mockResolvedValue('test-file-id');
+vi.mock('../../../services/database', () => ({
+  createAsset: mockCreateAsset
+}));
+
 // Mock the notification context
 const mockAddNotification = vi.fn();
 vi.mock('../../../context/NotificationContext', () => ({

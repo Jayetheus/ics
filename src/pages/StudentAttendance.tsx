@@ -20,7 +20,96 @@ import {
 import { parseQRCode, isQRCodeExpired } from '../utils/qrCodeUtils';
 import { AttendanceRecord } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import { Scanner } from '@yudiel/react-qr-scanner';
+// Local camera-based QR scanner using the browser BarcodeDetector API when available.
+// Falls back to a minimal frame-capture loop when BarcodeDetector is not available
+// (note: without a decoding library the fallback cannot decode QR codes —
+// BarcodeDetector is preferred and available in modern Chromium-based browsers).
+
+type CameraScannerProps = {
+  onScan: (detectedCodes: any[]) => void;
+  onError: (err: any) => void;
+  constraints?: MediaStreamConstraints;
+  setCameraLoading?: (v: boolean) => void;
+};
+
+const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onError, constraints = { video: { facingMode: 'environment' } }, setCameraLoading }) => {
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const rafRef = React.useRef<number | null>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+
+  React.useEffect(() => {
+    
+    let mounted = true;
+    const start = async () => {
+      try {
+        setCameraLoading?.(true);
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (!mounted) return;
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+
+        // Use BarcodeDetector if available
+        const BarcodeDetectorCtor = (window as any).BarcodeDetector;
+        if (BarcodeDetectorCtor) {
+          const detector = new BarcodeDetectorCtor({ formats: ['qr_code'] });
+
+          const detectLoop = async () => {
+            try {
+              if (!videoRef.current) return;
+              const barcodes = await detector.detect(videoRef.current);
+              if (barcodes && barcodes.length > 0) {
+                // map to expected shape with rawValue
+                const results = barcodes.map((b: any) => ({ rawValue: b.rawValue || b.raw_value || b.rawData }));
+                onScan(results);
+                // stop after successful detection
+                return;
+              }
+            } catch (err) {
+              // Some implementations throw on detect; surface the error
+              onError(err);
+            }
+            rafRef.current = requestAnimationFrame(detectLoop);
+          };
+
+          rafRef.current = requestAnimationFrame(detectLoop);
+        } else {
+          // No BarcodeDetector available — start a simple frame loop that
+          // currently cannot decode QR codes without an external library.
+          // We still provide the video feed; detection will rely on external
+          // code or the browser's capabilities.
+          const fallbackLoop = () => {
+            // no-op detection
+            rafRef.current = requestAnimationFrame(fallbackLoop);
+          };
+          rafRef.current = requestAnimationFrame(fallbackLoop);
+        }
+      } catch (err) {
+        onError(err);
+      } finally {
+        setCameraLoading?.(false);
+      }
+    };
+
+    start();
+
+    return () => {
+      mounted = false;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, [onScan, onError, constraints, setCameraLoading]);
+
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+    </div>
+  );
+};
 
 const StudentAttendance: React.FC = () => {
   const { currentUser } = useAuth();
@@ -32,6 +121,26 @@ const StudentAttendance: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraLoading, setCameraLoading] = useState(false);
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
+
+  // Request camera permission explicitly before opening the scanner modal.
+  const handleOpenScanner = async () => {
+    setCameraError(null);
+    setCameraLoading(true);
+    try {
+      // Try to acquire a short-lived stream to prompt for permission.
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      // Permission granted; stop tracks immediately and open the scanner UI.
+      stream.getTracks().forEach((t) => t.stop());
+      setShowScanner(true);
+    } catch (err: any) {
+      console.error('Camera permission error:', err);
+      setCameraError('Camera access denied or not available');
+      addNotification({ type: 'error', title: 'Camera Permission', message: 'Camera access was denied. Please allow camera permission to scan QR codes.' });
+    } finally {
+      setCameraLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchAttendanceRecords = async () => {
@@ -197,8 +306,9 @@ const StudentAttendance: React.FC = () => {
             <p className="text-gray-600 mt-1">Scan QR codes to mark your attendance</p>
           </div>
           <button
-            onClick={() => setShowScanner(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            onClick={() => setShowPermissionPrompt(true)}
+            disabled={cameraLoading}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             <Camera className="h-4 w-4 mr-2" />
             Scan QR Code
@@ -295,13 +405,11 @@ const StudentAttendance: React.FC = () => {
                         </div>
                       </div>
                     )}
-                    <Scanner
-                      onScan={handleScan}
+                    <CameraScanner
+                      onScan={(results) => handleScan(results as any[])}
                       onError={handleError}
-                      constraints={{ facingMode: 'environment' }}
-                      styles={{
-                        container: { width: '100%', height: '100%' }
-                      }}
+                      constraints={{ video: { facingMode: 'environment' } }}
+                      setCameraLoading={setCameraLoading}
                     />
                   </div>
                   <p className="text-sm text-gray-600 mt-2">
@@ -333,6 +441,47 @@ const StudentAttendance: React.FC = () => {
                     Retry
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Camera Permission Prompt Modal */}
+      {showPermissionPrompt && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Camera Permission</h3>
+              <button
+                onClick={() => setShowPermissionPrompt(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="sr-only">Close</span>
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="text-center">
+              <p className="text-gray-700 mb-4">This app needs access to your device camera to scan attendance QR codes. Please allow camera access when prompted.</p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={async () => {
+                    setShowPermissionPrompt(false);
+                    await handleOpenScanner();
+                  }}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Allow Camera
+                </button>
+                <button
+                  onClick={() => setShowPermissionPrompt(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BookOpen, Calendar, Award, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getSubjectsByCourse, getUserById, getResultsByStudent } from '../services/database';
+import { getResultsByStudent, getStudentSubjects } from '../services/database';
 import { Subject, Result } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
@@ -16,12 +16,10 @@ const Subjects: React.FC = () => {
     const load = async () => {
       if (!currentUser) return;
       try {
-        const user = await getUserById(currentUser.uid);
-        const courseCode = user?.courseCode;
-        
-        if (courseCode) {
+        const courseCodes = currentUser?.enrolledSubjects;
+        if (courseCodes) {
           const [subs, studentResults] = await Promise.all([
-            getSubjectsByCourse(courseCode),
+            getStudentSubjects(currentUser.enrolledSubjects as string[]),
             getResultsByStudent(currentUser.uid)
           ]);
           setSubjects(subs);
@@ -106,7 +104,7 @@ const Subjects: React.FC = () => {
           {filteredSubjects.map(subject => {
             const result = getSubjectResult(subject.code);
             return (
-              <div key={subject.id} className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+              <div key={subject.code} className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow">
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center">

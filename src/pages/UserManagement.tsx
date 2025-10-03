@@ -6,7 +6,7 @@ import {
   Image, FolderOpen
 } from 'lucide-react';
 import { getUsers, createUser, updateUser, deleteUser, createLecturer, getColleges, getAssetsByUploader, deleteAsset, createAsset } from '../services/database';
-import { generateStaffNumber } from '../services/dataLoader';
+import { generateStaffNumber } from '../services/database';
 import { User, College, Asset } from '../types';
 import { DEPARTMENTS } from '../data/constants';
 import { EmailData, emailService } from '../services/emailService';
