@@ -1,27 +1,84 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  getDoc, 
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  getDoc,
   getDocs,
-  query, 
-  where, 
+  query,
+  where,
   orderBy,
-  arrayUnion, 
-  Timestamp, 
+  Timestamp,
   setDoc
 } from 'firebase/firestore';
-import { auth, db, secondaryAuth } from './firebase';
-import { Student, Course, Result, Timetable, Payment, Ticket, Asset, Application, Subject } from '../types';
+import { db, secondaryAuth } from './firebase';
+import { Student, Course, Result, Timetable, Payment, Ticket, Asset, Application, Subject, AttendanceSession, AttendanceRecord } from '../types';
 import type { College, Lecturer, User } from '../types';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 
-// @section: Students
-export const createStudent = async (studentData: any) => {
-  
-  const data = {...studentData, displayName: `${studentData.profile.firstName} ${studentData.profile.lastName}`}
+// @section: Users (Unified User Management)
+export const createUser = async (userData: Partial<User>, password: string): Promise<User> => {
+  // Create Firebase Auth user
+  const authUser = await createUserWithEmailAndPassword(
+    secondaryAuth,
+    userData.email!,
+    password
+  );
+  // Persist the user document using the Auth UID as the document ID to avoid
+  // mismatches and accidental orphaned documents. Use setDoc so we control the
+  // document id and contents.
+  const uid = authUser.user.uid;
+  const userDoc = {
+    uid,
+    firstName: userData.firstName || '',
+    lastName: userData.lastName || '',
+    email: userData.email || '',
+    role: userData.role || 'student',
+    status: 'active',
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+    ...userData
+  };
+
+  // Use merge to avoid overwriting any fields if a document already exists
+  await setDoc(doc(db, 'users', uid), userDoc, { merge: true });
+
+  return userDoc as User;
+};
+
+export const getUsers = async (): Promise<User[]> => {
+  const querySnapshot = await getDocs(collection(db, 'users'));
+  return querySnapshot.docs.map(docSnap => ({
+    uid: docSnap.id,
+    ...docSnap.data(),
+  } as User));
+};
+
+export const getUserById = async (uid: string): Promise<User | null> => {
+  const docRef = doc(db, 'users', uid);
+  const docSnap = await getDoc(docRef);
+  return docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } as User : null;
+};
+
+export const updateUser = async (uid: string, data: Partial<User>): Promise<User> => {
+  const docRef = doc(db, 'users', uid);
+  await updateDoc(docRef, {
+    ...data,
+    updatedAt: Timestamp.now(),
+  });
+
+  const updatedDoc = await getDoc(docRef);
+  return { uid: updatedDoc.id, ...updatedDoc.data() } as User;
+};
+
+export const deleteUser = async (uid: string): Promise<void> => {
+  await deleteDoc(doc(db, 'users', uid));
+};
+
+// Legacy Student functions for backward compatibility
+const createStudent = async (studentData: any) => {
+  const data = { ...studentData, displayName: `${studentData.profile.firstName} ${studentData.profile.lastName}` }
   await setDoc(doc(db, 'students', data.uid), {
     ...data,
     registrationDate: Timestamp.now(),
@@ -30,17 +87,19 @@ export const createStudent = async (studentData: any) => {
 };
 
 export const getStudents = async () => {
-  const querySnapshot = await getDocs(collection(db, 'students'));
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+  const q = query(collection(db, "users"), where("role", "==", "student"));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ ...doc.data() } as User)) as User[];
 };
 
 export const getStudentById = async (id: string) => {
-  const docRef = doc(db, 'students', id);
-  const docSnap = await getDoc(docRef);
-  return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Student : null;
+  const q = query(collection(db, "users"), where("uid", "==", id));
+
+  const docSnap = await getDocs(q);
+  return docSnap.docs[0].exists() ? { ...docSnap.docs[0].data() } as User : null;
 };
 
-export const updateStudent = async (id: string, data: Partial<Student>) => {
+const updateStudent = async (id: string, data: Partial<Student>) => {
   const docRef = doc(db, 'students', id);
   await updateDoc(docRef, data);
 };
@@ -74,7 +133,7 @@ export const getResultsByStudent = async (studentId: string) => {
 // Get results by subject code for a student
 export const getResultsByStudentAndSubject = async (studentId: string, subjectCode: string) => {
   const q = query(
-    collection(db, 'results'), 
+    collection(db, 'results'),
     where('studentId', '==', studentId),
     where('subjectCode', '==', subjectCode)
   );
@@ -100,24 +159,24 @@ export const getTimetable = async () => {
 // Get timetable by course and semester
 export const getTimetableByCourse = async (courseCode: string, semester?: 1 | 2, year?: number) => {
   let q = query(collection(db, 'timetable'), where('courseCode', '==', courseCode));
-  
+
   if (semester) {
     q = query(q, where('semester', '==', semester));
   }
-  
+
   if (year) {
     q = query(q, where('year', '==', year));
   }
-  
+
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Timetable));
 };
 
 // Get all courses with timetables
-export const getCoursesWithTimetables = async () => {
+const getCoursesWithTimetables = async () => {
   const querySnapshot = await getDocs(collection(db, 'timetable'));
   const timetables = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Timetable));
-  
+
   // Get unique courses
   const courseCodes = [...new Set(timetables.map(t => t.courseCode))];
   const courses = await Promise.all(
@@ -127,16 +186,73 @@ export const getCoursesWithTimetables = async () => {
       return course;
     })
   );
-  
+
   return courses.filter((course: any) => course !== null);
 };
 
-export const getCourseByCode = async (code: any): Promise<Course>=>{
+const getCourseByCode = async (code: any): Promise<Course> => {
   const q = query(collection(db, "courses"), where("code", "==", code));
   const snapShot = (await getDocs(q)).docs[0];
 
-  return {...snapShot.data() as Course }
+  return { ...snapShot.data() as Course }
 }
+
+// @section: Attendance
+export const createAttendanceSession = async (sessionData: Omit<AttendanceSession, 'id' | 'createdAt' | 'expiresAt'>) => {
+  const docRef = await addDoc(collection(db, 'attendanceSessions'), {
+    ...sessionData,
+    createdAt: Timestamp.now(),
+    expiresAt: Timestamp.fromDate(new Date(Date.now() + 2 * 60 * 60 * 1000)) // 2 hours from now
+  });
+  return docRef.id;
+};
+
+export const getAttendanceSessionsByLecturer = async (lecturerId: string) => {
+  const q = query(collection(db, 'attendanceSessions'), where('lecturerId', '==', lecturerId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceSession));
+};
+
+const getActiveAttendanceSessions = async () => {
+  const q = query(collection(db, 'attendanceSessions'), where('isActive', '==', true));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceSession));
+};
+
+export const updateAttendanceSession = async (sessionId: string, data: Partial<AttendanceSession>) => {
+  const docRef = doc(db, 'attendanceSessions', sessionId);
+  await updateDoc(docRef, data);
+};
+
+export const createAttendanceRecord = async (recordData: Omit<AttendanceRecord, 'id' | 'timestamp'>) => {
+  const docRef = await addDoc(collection(db, 'attendanceRecords'), {
+    ...recordData,
+    timestamp: Timestamp.now()
+  });
+  return docRef.id;
+};
+
+export const getAttendanceRecordsBySession = async (sessionId: string) => {
+  const q = query(collection(db, 'attendanceRecords'), where('sessionId', '==', sessionId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
+};
+
+export const getAttendanceRecordsByStudent = async (studentId: string) => {
+  const q = query(collection(db, 'attendanceRecords'), where('studentId', '==', studentId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
+};
+
+export const checkStudentAttendance = async (sessionId: string, studentId: string | null) => {
+  const q = query(
+    collection(db, 'attendanceRecords'),
+    where('sessionId', '==', sessionId),
+    where('studentId', '==', studentId)
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.length > 0;
+};
 
 
 // @section: Payments
@@ -183,7 +299,7 @@ export const getTickets = async () => {
 
 export const getTicketsByStudent = async (studentId: string) => {
   const q = query(
-    collection(db, 'tickets'), 
+    collection(db, 'tickets'),
     where('studentId', '==', studentId),
     orderBy('createdAt', 'desc')
   );
@@ -252,11 +368,28 @@ export const updateApplicationStatus = async (applicationId: string, status: App
 // @endsection
 
 // @section: Registrations
-export const getStudentRegistration =  async (studentId: string) => {
-  const q = query(collection(db, 'students'), where('uid', '==', studentId));
+export const getStudentRegistration = async (studentId: string) => {
+  const q = query(collection(db, 'users'), where('uid', '==', studentId));
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id,courseCode: doc.data().profile.course, year: doc.data().profile.year} as any))[0];
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data()} as any))[0];
 }
+
+export async function registerStudent(currentUser: any, approvedApp: Application) {
+  console.log(currentUser.uid && approvedApp)
+
+  if (!(currentUser.uid && approvedApp)) throw new Error('Missing parameters');
+
+  const studentRef = doc(db, 'users', currentUser.uid);
+  await setDoc(studentRef, {
+    ...currentUser,
+    courseCode: approvedApp.courseCode,
+    college: (await getColleges()).filter(async college => college.id === (await getCourses()).filter(course => course.code === approvedApp.courseCode)[0].collegeId),
+    year: 1, 
+    registrationDate: new Date()
+  });
+}
+
+
 // @endsection
 
 
@@ -297,7 +430,6 @@ export const deleteCourse = async (id: string) => {
   const docRef = doc(db, 'courses', id);
   await deleteDoc(docRef);
 };
-
 // @section: Colleges
 export const createCollege = async (collegeData: Omit<College, 'id' | 'createdAt'>) => {
   const docRef = await addDoc(collection(db, 'colleges'), {
@@ -334,6 +466,18 @@ export const getSubjectsByCourse = async (courseCode: string) => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
 };
 
+export const getStudentSubjects = async (subjectCodes: string[]) => {
+  const courses = [] as Subject[];
+
+  subjectCodes.forEach(async code => {
+    const q = query(collection(db, 'subjects'), where('code', '==', code));
+    const querySnapshot = await getDocs(q);
+    console.log(querySnapshot.docs[0].data())
+    courses.push(querySnapshot.docs[0].data() as Subject)
+  })
+  
+  return courses as Subject[];
+}
 
 // @endsection
 
@@ -355,19 +499,19 @@ export const deleteResult = async (id: string) => {
 export const getFinancesByStudentId = async (id: string) => {
   const docRef = doc(db, "finance", id);
   const snapShot = await getDoc(docRef);
-  return snapShot.exists() ? snapShot.data() as any : {records: [], total: 0}
+  return snapShot.exists() ? snapShot.data() as any : { records: [], total: 0 }
 }
 
-export const updateFinancesByStudentId = async (id: string, newData: {amount: number, detail: string}[]) => {
+export const updateFinancesByStudentId = async (id: string, newData: { amount: number, detail: string }[]) => {
   const docRef = doc(db, "finance", id);
-  
+
   // Get existing data first
   const existingData = await getFinancesByStudentId(id);
   const existingRecords = existingData.records || [];
-  
+
   // Merge new data with existing records
   const updatedRecords = [...existingRecords, ...newData];
-  
+
   // Update the document with merged records
   await setDoc(docRef, {
     records: updatedRecords,
@@ -394,19 +538,19 @@ export const deleteTimetableEntry = async (id: string) => {
 };
 
 // Delete payment
-export const deletePayment = async (id: string) => {
+const deletePayment = async (id: string) => {
   const docRef = doc(db, 'payments', id);
   await deleteDoc(docRef);
 };
 
 // Delete ticket
-export const deleteTicket = async (id: string) => {
+const deleteTicket = async (id: string) => {
   const docRef = doc(db, 'tickets', id);
   await deleteDoc(docRef);
 };
 
 // Delete application
-export const deleteApplication = async (id: string) => {
+const deleteApplication = async (id: string) => {
   const docRef = doc(db, 'applications', id);
   await deleteDoc(docRef);
 };
@@ -426,9 +570,9 @@ export const getAllTickets = async () => {
 };
 
 // Get tickets by status
-export const getTicketsByStatus = async (status: Ticket['status']) => {
+const getTicketsByStatus = async (status: Ticket['status']) => {
   const q = query(
-    collection(db, 'tickets'), 
+    collection(db, 'tickets'),
     where('status', '==', status),
     orderBy('createdAt', 'desc')
   );
@@ -437,9 +581,9 @@ export const getTicketsByStatus = async (status: Ticket['status']) => {
 };
 
 // Get payments by status
-export const getPaymentsByStatus = async (status: Payment['status']) => {
+const getPaymentsByStatus = async (status: Payment['status']) => {
   const q = query(
-    collection(db, 'payments'), 
+    collection(db, 'payments'),
     where('status', '==', status),
     orderBy('date', 'desc')
   );
@@ -455,16 +599,16 @@ export const getResultsByCourse = async (courseCode: string) => {
 };
 
 // Get timetable by day
-export const getTimetableByDay = async (day: string) => {
+const getTimetableByDay = async (day: string) => {
   const q = query(collection(db, 'timetable'), where('day', '==', day));
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Timetable));
 };
 
 // Get assets by category
-export const getAssetsByCategory = async (category: Asset['category']) => {
+const getAssetsByCategory = async (category: Asset['category']) => {
   const q = query(
-    collection(db, 'assets'), 
+    collection(db, 'assets'),
     where('category', '==', category),
     orderBy('uploadedAt', 'desc')
   );
@@ -475,7 +619,7 @@ export const getAssetsByCategory = async (category: Asset['category']) => {
 // Get assets by uploader
 export const getAssetsByUploader = async (uploadedBy: string) => {
   const q = query(
-    collection(db, 'assets'), 
+    collection(db, 'assets'),
     where('uploadedBy', '==', uploadedBy),
     orderBy('uploadedAt', 'desc')
   );
@@ -485,20 +629,21 @@ export const getAssetsByUploader = async (uploadedBy: string) => {
 
 // Simple enrolled subjects storage per student
 export const enrollStudentSubjects = async (studentId: string, subjectCodes: string[]) => {
-  const ref = doc(db, 'students', studentId);
-  await setDoc(ref, { enrolledSubjects: subjectCodes });
+  const ref = doc(db, 'users', studentId);
+  // Merge enrolledSubjects into existing user doc to avoid clearing other fields
+  await setDoc(ref, { enrolledSubjects: subjectCodes }, { merge: true });
 };
 
 // Populate subjects for a course
-export const populateSubjectsForCourse = async (courseName: string) => {
+const populateSubjectsForCourse = async (courseName: string) => {
   const { COURSE_SUBJECTS } = await import('../data/constants');
   const subjects = COURSE_SUBJECTS[courseName as keyof typeof COURSE_SUBJECTS];
-  
+
   if (!subjects) {
     throw new Error(`No subjects defined for course: ${courseName}`);
   }
 
-  const subjectPromises = subjects.map(subject => 
+  const subjectPromises = subjects.map(subject =>
     createSubject({
       courseCode: courseName,
       code: subject.code,
@@ -517,96 +662,100 @@ export const populateSubjectsForCourse = async (courseName: string) => {
 //THESE ARE MADE BY ME
 
 // @section: ADMIN METHODS
-// Get all users from Firestore
-export async function getUsers(): Promise<User[]> {
-  const snapshot = await getDocs(collection(db, 'users'));
-  return snapshot.docs.map(docSnap => ({
-    uid: docSnap.id,
-    ...docSnap.data(),
-  } as User));
-}
-
-// Create a new user in Firestore
-export async function createUser(data: Partial<User>): Promise<User> {
-  const docRef = await addDoc(collection(db, 'users'), {
-    firstName: data.firstName || '',
-    lastName: data.lastName || '',
-    email: data.email || '',
-    role: data.role || 'student',
-  });
-  return {
-    uid: docRef.id,
-    firstName: data.firstName || '',
-    lastName: data.lastName || '',
-    email: data.email || '',
-    role: data.role || 'student',
-  };
-}
-
-// Update an existing user in Firestore
-export async function updateUser(uid: string, data: Partial<User>): Promise<User> {
-  const userDoc = doc(db, 'users', uid);
-  await updateDoc(userDoc, data);
-  const updatedSnap = await getDocs(collection(db, 'users'));
-  const updatedUser = updatedSnap.docs.find(d => d.id === uid);
-  if (!updatedUser) throw new Error('User not found');
-  return {
-    uid,
-    ...updatedUser.data(),
-  } as User;
-}
-
-// Delete a user from Firestore
-export async function deleteUser(uid: string): Promise<void> {
-  await deleteDoc(doc(db, 'users', uid));
-}
+// These functions are now defined above in the unified user management section
 
 
-// Create lecturer user
-export const createLecturer = async (lecturerData: Lecturer) => {
+// Create lecturer user (using unified User interface)
+export const createLecturer = async (lecturerData: Partial<User>, password: string) => {
+  try {
 
-  let data = lecturerData;
-  await createUserWithEmailAndPassword(secondaryAuth,lecturerData.email, "123456").then(resp=>{
-    data = { 
-      ...lecturerData,
-      uid: resp.user.uid
-    }
+    // Create Firebase Auth user
+    const authUser = await createUserWithEmailAndPassword(
+      secondaryAuth,
+      lecturerData.email!,
+      password
+    );
 
-  })
+    // Create user document with lecturer-specific data
+    const userData: Partial<User> = {
+      uid: authUser.user.uid,
+      firstName: lecturerData.firstName || '',
+      lastName: lecturerData.lastName || '',
+      email: lecturerData.email || '',
+      role: 'lecturer',
+      status: 'active',
+      staffNumber: lecturerData.staffNumber || '',
+      department: lecturerData.department || '',
+      collegeId: lecturerData.collegeId || '',
+      hireDate: lecturerData.hireDate || new Date().toISOString().split('T')[0],
+      phone: lecturerData.phone || '',
+      address: lecturerData.address || '',
+      qualifications: lecturerData.qualifications || '',
+      subjects: [],
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    };
 
-  await setDoc(doc(db, 'lecturers', data.uid), {
-    ...lecturerData,
-    role: "lecturer",
-    hireDate: lecturerData.hireDate || new Date().toISOString().split('T')[0],
-    status: 'active',
-    subjects: []
-  });
-  return true;
+    // Use merge so we don't overwrite any existing fields unintentionally
+    await setDoc(doc(db, 'users', authUser.user.uid), userData, { merge: true });
+    return true;
+  } catch (error) {
+    console.error('Error creating lecturer:', error);
+    throw error;
+  }
 };
 
-// Get all lecturers
-export const getLecturers = async (): Promise<Lecturer[]> => {
-  const querySnapshot = await getDocs(collection(db, 'lecturers'));
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Lecturer));
+// Get all lecturers (from unified users collection)
+export const getLecturers = async (): Promise<User[]> => {
+  const q = query(collection(db, 'users'), where('role', '==', 'lecturer'));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
 };
 
 // Get lecturer by ID
-export const getLecturerById = async (id: string): Promise<Lecturer | null> => {
-  const docRef = doc(db, 'lecturers', id);
+const getLecturerById = async (uid: string): Promise<User | null> => {
+  const docRef = doc(db, 'users', uid);
   const docSnap = await getDoc(docRef);
-  return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as unknown as Lecturer : null;
+  if (!docSnap.exists()) return null;
+
+  const userData = docSnap.data();
+  if (userData.role !== 'lecturer') return null;
+
+  return { uid: docSnap.id, ...userData } as User;
 };
 
 // Update lecturer
-export const updateLecturer = async (id: string, data: Partial<Lecturer>) => {
+const updateLecturer = async (id: string, data: Partial<Lecturer>) => {
   const docRef = doc(db, 'lecturers', id);
   await updateDoc(docRef, data);
 };
 
 // Delete lecturer
-export const deleteLecturer = async (id: string) => {
+const deleteLecturer = async (id: string) => {
   const docRef = doc(db, 'lecturers', id);
   await deleteDoc(docRef);
 };
-
 // @endsection
+
+
+
+// Generate student number in format: YYYY + sequential number (e.g., 2024001234)
+export const generateStudentNumber = async (): Promise<string> => {
+  const currentYear = new Date().getFullYear();
+  const studentsRef = collection(db, 'students');
+  const q = query(studentsRef, where('studentNumber', '>=', `${currentYear}000000`), where('studentNumber', '<', `${currentYear + 1}000000`));
+  const snapshot = await getDocs(q);
+
+  const nextNumber = snapshot.size + 1;
+  return `${currentYear}${nextNumber.toString().padStart(6, '0')}`;
+};
+
+// Generate staff number in format: LEC + sequential number (e.g., LEC001234)
+export const generateStaffNumber = async (): Promise<string> => {
+  const lecturersRef = collection(db, 'lecturers');
+  const q = query(lecturersRef, where('staffNumber', '>=', 'LEC000000'), where('staffNumber', '<', 'LEC999999'));
+  const snapshot = await getDocs(q);
+
+  const nextNumber = snapshot.size + 1;
+  return `LEC${nextNumber.toString().padStart(6, '0')}`;
+};

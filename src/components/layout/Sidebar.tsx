@@ -8,11 +8,11 @@ import {
   HelpCircle, 
   FileText, 
   Calendar,
-  Settings,
   BarChart3,
   Upload,
   User,
-  CheckCircle
+  CheckCircle,
+  QrCode
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -40,6 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
           { icon: FileText, label: 'Results', path: '/results' },
           { icon: BookOpen, label: 'Subjects', path: '/subjects' },
           { icon: Calendar, label: 'Timetable', path: '/timetable' },
+          { icon: QrCode, label: 'Attendance', path: '/attendance' },
           { icon: CreditCard, label: 'Finance', path: '/finance' },
           { icon: Upload, label: 'Documents', path: '/documents' },
           { icon: HelpCircle, label: 'Helpdesk', path: '/helpdesk' },
@@ -48,10 +49,13 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       case 'lecturer':
         return [
           ...baseItems,
-          { icon: Users, label: 'Students', path: '/students' },
+          { icon: Users, label: 'Students', path: '/lecturer-students' },
           { icon: BookOpen, label: 'Courses', path: '/courses' },
           { icon: Calendar, label: 'Schedule', path: '/schedule' },
+          { icon: QrCode, label: 'Attendance', path: '/lecturer-attendance' },
           { icon: FileText, label: 'Results Entry', path: '/results-entry' },
+          { icon: BarChart3, label: 'Results Management', path: '/results-management' },
+          { icon: BarChart3, label: 'Reports', path: '/lecturer-reports' },
           { icon: HelpCircle, label: 'Helpdesk', path: '/helpdesk' },
         ];
       

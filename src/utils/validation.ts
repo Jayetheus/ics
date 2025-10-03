@@ -152,7 +152,7 @@ export const useFormValidation = (initialData: any, validationRules: { [key: str
   }, [data, validationRules]);
 
   const handleChange = React.useCallback((field: string, value: any) => {
-    setData(prev => ({ ...prev, [field]: value }));
+    setData((prev: any) => ({ ...prev, [field]: value }));
     
     // Clear error when user starts typing
     if (errors[field]) {
@@ -207,3 +207,21 @@ export const useFormValidation = (initialData: any, validationRules: { [key: str
 
 // Import React for the hook
 import React from 'react';
+
+// Individual validation functions for testing
+export const validateEmail = (email: string): boolean => {
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailPattern.test(email);
+};
+
+export const validatePassword = (password: string): boolean => {
+  // At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character
+  const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  return passwordPattern.test(password);
+};
+
+export const validatePhoneNumber = (phone: string): boolean => {
+  // Support various phone number formats
+  const phonePattern = /^(\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})$/;
+  return phonePattern.test(phone.replace(/\s/g, ''));
+};

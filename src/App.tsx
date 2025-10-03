@@ -28,9 +28,14 @@ import FinancialReports from './pages/FinancialReports';
 import PaymentProofs from './pages/PaymentProofs';
 import ApplicationsManagement from './pages/ApplicationsManagement';
 import TimetableManagement from './pages/TimetableManagement';
+import LecturerAttendance from './pages/LecturerAttendance';
+import LecturerStudentManagement from './pages/LecturerStudentManagement';
+import LecturerReports from './pages/LecturerReports';
+import StudentAttendance from './pages/StudentAttendance';
 import FinalizeRegistration from './pages/FinalizeRegistration';
 import Subjects from './pages/Subjects';
 import CollegeManagement from './pages/CollegeManagement';
+import ResultsManagement from './pages/ResultsManagement';
 
 const AppContent: React.FC = () => {
   const { notifications, removeNotification } = useNotification();
@@ -82,6 +87,11 @@ const AppContent: React.FC = () => {
             <Route path="timetable" element={
               <ProtectedRoute allowedRoles={['student']}>
                 <Timetable />
+              </ProtectedRoute>
+            } />
+            <Route path="attendance" element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentAttendance />
               </ProtectedRoute>
             } />
             <Route path="finance" element={
@@ -146,6 +156,26 @@ const AppContent: React.FC = () => {
                 <TimetableManagement />
               </ProtectedRoute>
             } />
+            <Route path="lecturer-attendance" element={
+              <ProtectedRoute allowedRoles={['lecturer']}>
+                <LecturerAttendance />
+              </ProtectedRoute>
+            } />
+            <Route path="lecturer-students" element={
+              <ProtectedRoute allowedRoles={['lecturer']}>
+                <LecturerStudentManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="lecturer-reports" element={
+              <ProtectedRoute allowedRoles={['lecturer']}>
+                <LecturerReports />
+              </ProtectedRoute>
+            } />
+            <Route path="results-management" element={
+              <ProtectedRoute allowedRoles={['lecturer']}>
+                <ResultsManagement />
+              </ProtectedRoute>
+            } />
 
             {/* Finance routes */}
             <Route path="payment-management" element={
@@ -193,7 +223,6 @@ const AppContent: React.FC = () => {
 };
 
 function App() {
-  console.log("App component rendered");
 
   return (
     <ErrorBoundary>

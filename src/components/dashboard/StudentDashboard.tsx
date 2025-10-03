@@ -13,12 +13,13 @@ import {
   TrendingUp,
   ArrowRight,
   User,
-  HelpCircle
+  HelpCircle,
+  QrCode
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { getResultsByStudent, getTimetable, getTimetableByCourse, getPaymentsByStudent, getApplicationsByStudent, getStudentRegistration, getSubjectsByCourse, getFinancesByStudentId, getStudentById } from '../../services/database';
-import { Result, Timetable, Payment, Application} from '../../types';
+import { getResultsByStudent, getTimetableByCourse, getPaymentsByStudent, getApplicationsByStudent, getStudentRegistration, getSubjectsByCourse, getFinancesByStudentId, getUserById, getAttendanceRecordsByStudent } from '../../services/database';
+import { Result, Timetable, Payment, Application, AttendanceRecord } from '../../types';
 import { SkeletonDashboard } from '../common/Skeleton';
 
 const StudentDashboard: React.FC = () => {
@@ -33,6 +34,7 @@ const StudentDashboard: React.FC = () => {
   const [subjectsNumber, setSubjectsNumber] = useState<number>(0);
   const [studentData, setStudentData] = useState<any>(null);
   const [finances, setFinances] = useState<any>({ records: [], total: 0 });
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -44,13 +46,14 @@ const StudentDashboard: React.FC = () => {
       console.log(currentUser.uid)
       try {
         setError(null);
-        const [resultsData, paymentsData, applicationsData, regs, studentInfo, financesData] = await Promise.all([
+        const [resultsData, paymentsData, applicationsData, regs, studentInfo, financesData, attendanceData] = await Promise.all([
           getResultsByStudent(currentUser.uid),
           getPaymentsByStudent(currentUser.uid),
           getApplicationsByStudent(currentUser.uid),
           getStudentRegistration(currentUser.uid),
-          getStudentById(currentUser.uid),
-          getFinancesByStudentId(currentUser.uid)
+          getUserById(currentUser.uid),
+          getFinancesByStudentId(currentUser.uid),
+          getAttendanceRecordsByStudent(currentUser.uid)
         ]);
         
         // Get timetable for the student's course if registered
@@ -66,6 +69,7 @@ const StudentDashboard: React.FC = () => {
         setRegistration(regs);
         setStudentData(studentInfo);
         setFinances(financesData);
+        setAttendanceRecords(attendanceData);
         
         // Get subjects count if registration exists
         if (regs?.courseCode) {
@@ -113,6 +117,12 @@ const StudentDashboard: React.FC = () => {
     outstandingAmount,
     status: outstandingAmount > 0 ? 'partial' : 'paid'
   };
+
+  // Calculate attendance statistics
+  const totalAttendance = attendanceRecords.length;
+  const presentCount = attendanceRecords.filter(r => r.status === 'present').length;
+  const lateCount = attendanceRecords.filter(r => r.status === 'late').length;
+  const attendanceRate = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
 
   if (loading) {
     return <SkeletonDashboard />;
@@ -239,7 +249,7 @@ const StudentDashboard: React.FC = () => {
       )}
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -296,6 +306,24 @@ const StudentDashboard: React.FC = () => {
               <p className="text-sm font-semibold capitalize text-gray-900">
                 R{financeStatus.outstandingAmount.toLocaleString()} Outstanding
               </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center">
+            <div className={`p-2 rounded-lg ${
+              attendanceRate >= 80 ? 'bg-green-100' : 
+              attendanceRate >= 60 ? 'bg-yellow-100' : 'bg-red-100'
+            }`}>
+              <QrCode className={`h-6 w-6 ${
+                attendanceRate >= 80 ? 'text-green-600' : 
+                attendanceRate >= 60 ? 'text-yellow-600' : 'text-red-600'
+              }`} />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm text-gray-600">Attendance Rate</p>
+              <p className="text-2xl font-semibold text-gray-900">{attendanceRate}%</p>
             </div>
           </div>
         </div>
@@ -453,10 +481,17 @@ const StudentDashboard: React.FC = () => {
             </button>
             
             <button className="flex flex-col items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
+              onClick={() => navigate('/attendance')}            
+            >
+              <QrCode className="h-8 w-8 text-orange-600 mb-2" />
+              <span className="text-sm font-medium text-orange-900">Mark Attendance</span>
+            </button>
+            
+            <button className="flex flex-col items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
               onClick={() => navigate('/helpdesk')}            
             >
-              <HelpCircle className="h-8 w-8 text-orange-600 mb-2" />
-              <span className="text-sm font-medium text-orange-900">Get Help</span>
+              <HelpCircle className="h-8 w-8 text-gray-600 mb-2" />
+              <span className="text-sm font-medium text-gray-900">Get Help</span>
             </button>
           </div>
         </div>

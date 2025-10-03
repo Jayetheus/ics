@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, User, Download, Filter } from 'lucide-react';
+import { Clock, MapPin, User, Download, Filter } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getTimetable, getTimetableByCourse, getStudentRegistration } from '../services/database';
-import { Timetable as TimetableType } from '../types';
+import {getTimetableByCourse, getStudentRegistration, getLecturers } from '../services/database';
+import { User as UserType, Timetable as TimetableType } from '../types';
 
 const Timetable: React.FC = () => {
   const { currentUser } = useAuth();
@@ -10,6 +10,7 @@ const Timetable: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedWeek, setSelectedWeek] = useState('current');
   const [viewMode, setViewMode] = useState<'week' | 'list'>('week');
+  const [lecturers, setLecturers] = useState<UserType[]>([]);
 
   useEffect(() => {
     const fetchTimetable = async () => {
@@ -19,11 +20,15 @@ const Timetable: React.FC = () => {
         setLoading(true);
         // Get student's course registration
         const registration = await getStudentRegistration(currentUser.uid);
-        
         if (registration?.courseCode) {
           // Get timetable for the student's specific course
-          const timetableData = await getTimetableByCourse(registration.courseCode);
+          console.log("Course Found")
+          const [timetableData, lecturerData] = await Promise.all([
+            await getTimetableByCourse(registration.courseCode),
+            await getLecturers()
+          ])
           setTimetable(timetableData);
+          setLecturers(lecturerData as any)
         } else {
           // If no course registered, show empty timetable
           setTimetable([]);
@@ -171,7 +176,7 @@ const Timetable: React.FC = () => {
                               </div>
                               <div className="flex items-center text-xs opacity-75">
                                 <User className="h-3 w-3 mr-1" />
-                                {classItem.lecturer}
+                                {lecturers.filter((lecturer: any) => lecturer.uid === classItem.lecturerId)[0].firstName} {lecturers.filter((lecturer: any) => lecturer.uid === classItem.lecturerId)[0].lastName}
                               </div>
                               <div className="flex items-center text-xs opacity-75">
                                 <Clock className="h-3 w-3 mr-1" />
@@ -227,7 +232,7 @@ const Timetable: React.FC = () => {
                               </div>
                               <div className="flex items-center">
                                 <User className="h-4 w-4 mr-2" />
-                                {classItem.lecturer}
+                                {lecturers.filter((lecturer: any) => lecturer.uid === classItem.lecturerId)[0].firstName} {lecturers.filter((lecturer: any) => lecturer.uid === classItem.lecturerId)[0].lastName}
                               </div>
                             </div>
                           </div>

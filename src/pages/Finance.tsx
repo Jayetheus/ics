@@ -56,7 +56,7 @@ const Finance: React.FC = () => {
       type: newPayment.type,
       description: newPayment.description,
       proofOfPaymentUrl: newPayment.proofOfPaymentUrl,
-      status: 'pending' as Payment['status'],
+      status: 'approved' as Payment['status'],
       date: Timestamp.now(),
     };
 
@@ -76,7 +76,7 @@ const Finance: React.FC = () => {
         proofOfPaymentUrl: '',
       });
       setShowPaymentForm(false);
-      alert('Payment submitted successfully! It will be reviewed by the finance team.');
+      alert('Payment submitted successfully!');
     } catch (error) {
       console.error('Error creating payment:', error);
       alert('Failed to submit payment. Please try again.');

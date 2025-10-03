@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, File, Image, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { uploadFile } from '../../services/storage';
+import { createAsset } from '../../services/database';
 import { useNotification } from '../../context/NotificationContext';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -53,8 +54,31 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
     try {
       for (const file of validFiles) {
+        // Upload file to Appwrite storage
         const uploadedFile = await uploadFile(file, folder);
-        onUpload(uploadedFile);
+        
+        // Create asset record in Fireabase database
+        const assetId = await createAsset({
+          name: uploadedFile.name,
+          originalName: uploadedFile.originalName,
+          type: uploadedFile.type,
+          fileId: uploadedFile.id,
+          bucketId: uploadedFile.bucketId,
+          url: uploadedFile.url,
+          uploadedBy: folder.split('/').pop() || 'unknown', // Extract user ID from folder
+          size: uploadedFile.size,
+          category: file.type.startsWith('image/') ? 'image' : 
+                   file.type.includes('pdf') || file.type.includes('document') ? 'document' :
+                   file.type.startsWith('video/') ? 'video' : 'other'
+        });
+        
+        onUpload({
+          ...uploadedFile,
+          id: assetId,
+          category: file.type.startsWith('image/') ? 'image' : 
+                   file.type.includes('pdf') || file.type.includes('document') ? 'document' :
+                   file.type.startsWith('video/') ? 'video' : 'other'
+        });
       }
       
       addNotification({
@@ -94,11 +118,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
     setDragOver(false);
   };
 
-  const getFileIcon = (type: string) => {
-    if (type.startsWith('image/')) return <Image className="h-8 w-8" />;
-    if (type.includes('pdf') || type.includes('document')) return <FileText className="h-8 w-8" />;
-    return <File className="h-8 w-8" />;
-  };
+  // file icon helper intentionally removed (not used)
 
   return (
     <div className={`relative ${className}`}>

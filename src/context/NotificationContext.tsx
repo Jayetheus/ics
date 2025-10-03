@@ -34,6 +34,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
     
     setNotifications(prev => [...prev, newNotification]);
+    
+    // Auto-dismiss after 5 seconds for success/error notifications
+    if (notification.type === 'success' || notification.type === 'error') {
+      setTimeout(() => {
+        removeNotification(id);
+      }, 5000);
+    }
   }, [removeNotification]);
 
   const clearAllNotifications = useCallback(() => {

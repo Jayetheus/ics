@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Calendar, 
   Plus, 
   Edit, 
   Trash2, 
-  Search, 
-  Filter, 
   Clock, 
   MapPin, 
   Users,
@@ -70,7 +67,7 @@ const TimetableManagement: React.FC = () => {
           getLecturers()
         ]);
         setCourses(coursesData);
-        setLecturers(lecturersData);
+        setLecturers(lecturersData as any);
       } catch (error) {
         console.error('Error fetching data:', error);
         addNotification({
