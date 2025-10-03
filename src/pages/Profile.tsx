@@ -11,6 +11,7 @@ import FileUpload from '../components/common/FileUpload';
 import { getAssetsByUploader, deleteAsset, createAsset } from '../services/database';
 import { Asset } from '../types';
 import { useNotification } from '../context/NotificationContext';
+import { deleteFile, getFileDownloadUrl, getFilePreviewUrl, getFileViewUrl } from '../services/storage';
 
 const Profile: React.FC = () => {
   const { currentUser } = useAuth();
@@ -98,9 +99,7 @@ const Profile: React.FC = () => {
         category: (fileData.type.startsWith('image/') ? 'image' : 'document') as 'image' | 'document' | 'video' | 'other'
       };
 
-      await createAsset(assetData as any);
-      
-      // Refresh documents list
+
       const userDocuments = await getAssetsByUploader(currentUser.uid);
       setDocuments(userDocuments);
       
@@ -119,11 +118,12 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleDocumentDelete = async (documentId: string) => {
+  const handleDocumentDelete = async (fileId: string,documentId: string) => {
     if (!window.confirm('Are you sure you want to delete this document?')) return;
 
     try {
       await deleteAsset(documentId);
+      await deleteFile(fileId);
       setDocuments(documents.filter(doc => doc.id !== documentId));
       
       addNotification({
@@ -141,10 +141,17 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleDocumentDownload = (url: string, name: string) => {
+  const handleDocumentDownload =async (fileId: string,originalName:string ) => {
     const link = document.createElement('a');
-    link.href = url;
-    link.download = name;
+    link.href = await getFileDownloadUrl(fileId);
+    link.download = originalName;
+    link.target = '_blank';
+    link.click();
+  };
+
+  const handleDocumentPreview =async (fileId: string) => {
+    const link = document.createElement('a');
+    link.href = await getFileViewUrl(fileId);
     link.target = '_blank';
     link.click();
   };
@@ -483,7 +490,7 @@ const Profile: React.FC = () => {
                     {getFileIcon(document.type)}
                     <div className="ml-3 flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {document.name}
+                        {document.originalName}
                       </p>
                       <p className="text-xs text-gray-500">
                         {formatFileSize(document.size)}
@@ -508,21 +515,21 @@ const Profile: React.FC = () => {
 
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => window.open(document.url, '_blank')}
+                    onClick={() => window.open(document.url, "_blank")}
                     className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
                   >
                     <Eye className="h-3 w-3 mr-1" />
                     View
                   </button>
                   <button
-                    onClick={() => handleDocumentDownload(document.url as any, document.name)}
+                    onClick={() => handleDocumentDownload(document.fileId as string, document.originalName)}
                     className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors"
                   >
                     <Download className="h-3 w-3 mr-1" />
                     Download
                   </button>
                   <button
-                    onClick={() => handleDocumentDelete(document.id)}
+                    onClick={() => handleDocumentDelete(document.fileId as string, document.id)}
                     className="px-3 py-2 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 transition-colors"
                   >
                     <Trash2 className="h-3 w-3" />

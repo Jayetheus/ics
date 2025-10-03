@@ -57,13 +57,14 @@ const FileUpload: React.FC<FileUploadProps> = ({
         // Upload file to Appwrite storage
         const uploadedFile = await uploadFile(file, folder);
         
-        // Create asset record in Appwrite database
+        // Create asset record in Fireabase database
         const assetId = await createAsset({
           name: uploadedFile.name,
           originalName: uploadedFile.originalName,
           type: uploadedFile.type,
           fileId: uploadedFile.id,
           bucketId: uploadedFile.bucketId,
+          url: uploadedFile.url,
           uploadedBy: folder.split('/').pop() || 'unknown', // Extract user ID from folder
           size: uploadedFile.size,
           category: file.type.startsWith('image/') ? 'image' : 

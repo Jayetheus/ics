@@ -23,6 +23,7 @@ export const uploadFile = async (file: File, folder: string = '') => {
       type: file.type,
       bucketId: BUCKET_ID,
       uploadedAt: response.$createdAt,
+      url: await getFileViewUrl(response.$id),
     };
   } catch (error) {
     console.error('Upload error:', error);
@@ -92,7 +93,7 @@ export const getFileInfo = async (fileId: string) => {
 export const listFiles = async (queries: string[] = []) => {
   try {
     const response = await storage.listFiles(BUCKET_ID, queries);
-    return response.documents.map(file => ({
+    return response.files.map(file => ({
       id: file.$id,
       name: file.name,
       size: file.sizeOriginal,

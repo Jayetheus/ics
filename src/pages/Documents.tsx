@@ -241,7 +241,7 @@ const Documents: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload New Document</h2>
           <FileUpload
-            onUpload={handleFileUpload}
+          onUpload={handleFileUpload}
             accept="image/*,.pdf,.doc,.docx,.txt"
             maxSize={10}
             folder={`user-documents/${currentUser?.uid}`}

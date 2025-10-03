@@ -230,9 +230,9 @@ export interface Asset {
   name: string;
   originalName: string;
   type: string;
-  url?: string; // Optional for backward compatibility
-  fileId?: string; // Appwrite file ID for storage operations
-  bucketId?: string; // Appwrite bucket ID
+  url?: string;
+  fileId?: string; 
+  bucketId?: string; 
   uploadedBy: string;
   uploadedAt: string;
   size: number;
