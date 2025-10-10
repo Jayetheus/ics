@@ -204,7 +204,6 @@ const UserManagement: React.FC = () => {
   const handleDocumentUpload = async (fileData: any) => {
     if (!selectedUser) return;
 
-    try {
       const assetData = {
         name: fileData.name,
         type: fileData.type,
@@ -225,14 +224,7 @@ const UserManagement: React.FC = () => {
         title: 'Document Uploaded',
         message: 'Document has been successfully uploaded for this user'
       });
-    } catch (error) {
-      console.error('Error uploading document:', error);
-      addNotification({
-        type: 'error',
-        title: 'Upload Failed',
-        message: 'Failed to upload document'
-      });
-    }
+    
   };
 
   const handleDocumentDelete = async (documentId: string) => {
