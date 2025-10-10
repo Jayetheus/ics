@@ -433,13 +433,29 @@ export async function registerStudent(currentUser: any, approvedApp: Application
   if (!(currentUser.uid && approvedApp)) throw new Error('Missing parameters');
 
   const studentRef = doc(db, 'users', currentUser.uid);
-  await setDoc(studentRef, {
-    ...currentUser,
-    courseCode: approvedApp.courseCode,
-    college: (await getColleges()).filter(async college => college.id === (await getCourses()).filter(course => course.code === approvedApp.courseCode)[0].collegeId),
-    year: 1, 
-    registrationDate: new Date()
-  });
+  // Resolve course and college properly to avoid using async callbacks inside Array.filter
+  try {
+    const course = await getCourseByCode(approvedApp.courseCode).catch(() => null);
+    let collegeData: any = null;
+    if (course && (course as any).collegeId) {
+      const colRef = doc(db, 'colleges', (course as any).collegeId);
+      const colSnap = await getDoc(colRef);
+      if (colSnap.exists()) {
+        collegeData = { id: colSnap.id, ...colSnap.data() };
+      }
+    }
+
+    await setDoc(studentRef, {
+      ...currentUser,
+      courseCode: approvedApp.courseCode,
+      college: collegeData ?? (course ? (course as any).collegeId : null),
+      year: 1,
+      registrationDate: new Date()
+    }, { merge: true });
+  } catch (err) {
+    console.error('registerStudent error', err);
+    throw err;
+  }
 }
 
 
@@ -685,8 +701,15 @@ export const getAssetsByUploader = async (uploadedBy: string) => {
 // Simple enrolled subjects storage per student
 export const enrollStudentSubjects = async (studentId: string, subjectCodes: string[]) => {
   const ref = doc(db, 'users', studentId);
-  // Merge enrolledSubjects into existing user doc to avoid clearing other fields
-  await setDoc(ref, { enrolledSubjects: subjectCodes }, { merge: true });
+  // Read existing enrolledSubjects and merge without duplicates
+  const snap = await getDoc(ref);
+  let existing: string[] = [];
+  if (snap.exists()) {
+    const data = snap.data();
+    existing = (data.enrolledSubjects || data.subjects || []) as string[];
+  }
+  const merged = Array.from(new Set([...(existing || []), ...subjectCodes]));
+  await setDoc(ref, { enrolledSubjects: merged }, { merge: true });
 };
 
 // Populate subjects for a course

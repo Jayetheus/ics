@@ -33,7 +33,7 @@ const FinalizeRegistration: React.FC = () => {
 
         // Check if student already registered in students collection
         const reg = await getStudentRegistration(currentUser.uid);
-        if (reg && reg.course) {
+  if (reg && (reg.course || reg.courseCode)) {
           setRegistered(true);
           // if registered, default to subject selection step
           setStep(2);
@@ -54,7 +54,9 @@ const FinalizeRegistration: React.FC = () => {
           );
           setSelected(defaultSelected);
           const selectedFinances = remaining.filter(sub => defaultSelected[sub.code]).map(value => ({ detail: value.code, amount: value.amount }));
-          if (!reg || !reg.course) {
+          // If the user was not previously registered for this course (no courseCode), set finances to selected;
+          // otherwise merge selected finances into existing finances
+          if (!reg || !(reg.course || reg.courseCode)) {
             setFinances(selectedFinances);
           } else {
             setFinances(prev => [...(prev || []), ...selectedFinances]);
