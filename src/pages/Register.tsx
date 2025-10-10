@@ -149,6 +149,9 @@ const Register: React.FC = () => {
 
       await register(formData.email, formData.password, formData.role, profileData);
       setSuccess('Registration successful! Redirecting to login...');
+      alert(
+        "Go to Profile and Upload All Required Documents!"
+      )
       setTimeout(() => navigate('/login'), 2000);
     } catch (error: any) {
       setError(error.message || 'Failed to create account. Please try again.');

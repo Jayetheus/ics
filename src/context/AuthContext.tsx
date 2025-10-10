@@ -35,6 +35,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      // When auth state changes, keep loading true until we've resolved the user data
+      setLoading(true);
       if (firebaseUser) {
         try {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
@@ -43,9 +45,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setCurrentUser({
               ...userData as User
             });
-
           } else {
             console.error('User document not found in Firestore');
+            // If no user doc, keep currentUser null but do not flip loading until finished
             setCurrentUser(null);
           }
         } catch (error) {
@@ -55,6 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLoading(false);
         }
       } else {
+        // No firebase user — keep currentUser null but briefly keep loading to allow UI to settle
         setCurrentUser(null);
         setLoading(false);
       }

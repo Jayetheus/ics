@@ -30,20 +30,20 @@ type CameraScannerProps = {
   onError: (err: any) => void;
   constraints?: MediaStreamConstraints;
   setCameraLoading?: (v: boolean) => void;
+  initialStream?: MediaStream | null;
 };
 
-const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onError, constraints = { video: { facingMode: 'environment' } }, setCameraLoading }) => {
+const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onError, constraints = { video: { facingMode: 'environment' } }, setCameraLoading, initialStream }) => {
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const rafRef = React.useRef<number | null>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
-
   React.useEffect(() => {
-    
     let mounted = true;
     const start = async () => {
       try {
         setCameraLoading?.(true);
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  // If an initial stream was provided (permission pre-granted), reuse it to avoid delay
+  const stream = initialStream ?? await navigator.mediaDevices.getUserMedia(constraints);
         if (!mounted) return;
         streamRef.current = stream;
         if (videoRef.current) {
@@ -61,14 +61,16 @@ const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onError, constrai
               if (!videoRef.current) return;
               const barcodes = await detector.detect(videoRef.current);
               if (barcodes && barcodes.length > 0) {
-                // map to expected shape with rawValue
                 const results = barcodes.map((b: any) => ({ rawValue: b.rawValue || b.raw_value || b.rawData }));
                 onScan(results);
                 // stop after successful detection
+                if (streamRef.current) {
+                  streamRef.current.getTracks().forEach(t => t.stop());
+                }
+                if (rafRef.current) cancelAnimationFrame(rafRef.current);
                 return;
               }
             } catch (err) {
-              // Some implementations throw on detect; surface the error
               onError(err);
             }
             rafRef.current = requestAnimationFrame(detectLoop);
@@ -76,12 +78,8 @@ const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onError, constrai
 
           rafRef.current = requestAnimationFrame(detectLoop);
         } else {
-          // No BarcodeDetector available — start a simple frame loop that
-          // currently cannot decode QR codes without an external library.
-          // We still provide the video feed; detection will rely on external
-          // code or the browser's capabilities.
+          // Fallback: keep the video playing; detection not available without a library.
           const fallbackLoop = () => {
-            // no-op detection
             rafRef.current = requestAnimationFrame(fallbackLoop);
           };
           rafRef.current = requestAnimationFrame(fallbackLoop);
@@ -121,6 +119,7 @@ const StudentAttendance: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraLoading, setCameraLoading] = useState(false);
+  const [sharedStream, setSharedStream] = useState<MediaStream | null>(null);
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
 
   // Request camera permission explicitly before opening the scanner modal.
@@ -128,11 +127,11 @@ const StudentAttendance: React.FC = () => {
     setCameraError(null);
     setCameraLoading(true);
     try {
-      // Try to acquire a short-lived stream to prompt for permission.
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      // Permission granted; stop tracks immediately and open the scanner UI.
-      stream.getTracks().forEach((t) => t.stop());
-      setShowScanner(true);
+  // Try to acquire a stream and keep it for the scanner to use — avoids double permission prompts
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  // Permission granted; keep stream in state so CameraScanner can reuse it immediately
+  setSharedStream(stream);
+  setShowScanner(true);
     } catch (err: any) {
       console.error('Camera permission error:', err);
       setCameraError('Camera access denied or not available');
@@ -198,6 +197,10 @@ const StudentAttendance: React.FC = () => {
 
           setScannedData(qrData);
           setShowScanner(false);
+          if (sharedStream) {
+            sharedStream.getTracks().forEach(t => t.stop());
+            setSharedStream(null);
+          }
         });
       } catch (error) {
         addNotification({
@@ -377,6 +380,10 @@ const StudentAttendance: React.FC = () => {
                 onClick={() => {
                   setShowScanner(false);
                   setCameraError(null);
+                  if (sharedStream) {
+                    sharedStream.getTracks().forEach(t => t.stop());
+                    setSharedStream(null);
+                  }
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -410,6 +417,7 @@ const StudentAttendance: React.FC = () => {
                       onError={handleError}
                       constraints={{ video: { facingMode: 'environment' } }}
                       setCameraLoading={setCameraLoading}
+                      initialStream={sharedStream}
                     />
                   </div>
                   <p className="text-sm text-gray-600 mt-2">
@@ -420,11 +428,15 @@ const StudentAttendance: React.FC = () => {
                 </div>
               )}
 
-              <div className="flex space-x-3">
+              <div className="flex space-x-3 mt-4">
                 <button
                   onClick={() => {
                     setShowScanner(false);
                     setCameraError(null);
+                    if (sharedStream) {
+                      sharedStream.getTracks().forEach(t => t.stop());
+                      setSharedStream(null);
+                    }
                   }}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
                 >
@@ -432,9 +444,10 @@ const StudentAttendance: React.FC = () => {
                 </button>
                 {cameraError && (
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       setCameraError(null);
-                      setShowScanner(true);
+                      // re-acquire and open scanner
+                      await handleOpenScanner();
                     }}
                     className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                   >

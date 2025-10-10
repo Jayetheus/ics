@@ -8,10 +8,10 @@ import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { COLLEGES, COURSES } from '../data/constants';
 import FileUpload from '../components/common/FileUpload';
-import { getAssetsByUploader, deleteAsset, createAsset } from '../services/database';
+import { getAssetsByUploader, deleteAsset } from '../services/database';
 import { Asset } from '../types';
 import { useNotification } from '../context/NotificationContext';
-import { deleteFile, getFileDownloadUrl, getFilePreviewUrl, getFileViewUrl } from '../services/storage';
+import { deleteFile, getFileDownloadUrl, getFileViewUrl } from '../services/storage';
 
 const Profile: React.FC = () => {
   const { currentUser } = useAuth();
@@ -86,20 +86,9 @@ const Profile: React.FC = () => {
   }, [currentUser, addNotification]);
 
   // Document management functions
-  const handleDocumentUpload = async (fileData: any) => {
+  const handleDocumentUpload = async () => {
     if (!currentUser) return;
-
     try {
-      const assetData = {
-        name: fileData.name,
-        type: fileData.type,
-        url: fileData.url,
-        uploadedBy: currentUser.uid,
-        size: fileData.size,
-        category: (fileData.type.startsWith('image/') ? 'image' : 'document') as 'image' | 'document' | 'video' | 'other'
-      };
-
-
       const userDocuments = await getAssetsByUploader(currentUser.uid);
       setDocuments(userDocuments);
       
