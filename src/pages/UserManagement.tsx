@@ -5,7 +5,7 @@ import {
   User as UserIcon, Mail, Shield, Clock,
   Image, FolderOpen
 } from 'lucide-react';
-import { getUsers, createUser, updateUser, deleteUser, createLecturer, getColleges, getAssetsByUploader, deleteAsset, createAsset } from '../services/database';
+import { getUsers, createUser, updateUser, deleteUser, deleteUserFull, deleteUserAndRelatedData, createLecturer, getColleges, getAssetsByUploader, deleteAsset, createAsset } from '../services/database';
 import { generateStaffNumber } from '../services/database';
 import { User, College, Asset } from '../types';
 import { DEPARTMENTS } from '../data/constants';
@@ -143,20 +143,39 @@ const UserManagement: React.FC = () => {
   };
 
   const handleDeleteUser = async (id: string) => {
-    if (!window.confirm('Delete this user?')) return;
+    if (!window.confirm('Delete this user? This will remove their records and request deletion of their account.')) return;
     try {
-      await deleteUser(id);
+      // Optionally ask for the user's password to perform client-side auth deletion
+      const useCredentials = window.confirm('Do you have the user\'s password and want to delete the auth account client-side? (Insecure)');
+      if (useCredentials) {
+        const email = window.prompt('Enter the user\'s email');
+        const password = window.prompt('Enter the user\'s password');
+        if (!email || !password) {
+          addNotification({ type: 'error', title: 'Missing Credentials', message: 'Email and password are required for credential-based deletion.' });
+          return;
+        }
+        // Dynamic import to avoid bundling auth helpers unnecessarily
+        const fb = await import('../services/firebase');
+        await fb.deleteUserByCredentials(email, password);
+        // Also delete Firestore records
+        await deleteUserAndRelatedData(id);
+      } else {
+        // Full deletion via configured endpoint (or best-effort)
+        await deleteUserFull(id);
+      }
+
       setUsers(users.filter(u => u.uid !== id));
       addNotification({
         type: 'success',
         title: 'User Deleted',
-        message: 'User has been successfully deleted'
+        message: 'User records removed and auth account deletion attempted.'
       });
-    } catch {
+    } catch (err) {
+      console.error('deleteUser error', err);
       addNotification({
         type: 'error',
         title: 'Delete Failed',
-        message: 'Failed to delete user'
+        message: String(err) || 'Failed to delete user'
       });
     }
   };

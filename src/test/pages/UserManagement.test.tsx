@@ -96,7 +96,10 @@ describe('UserManagement Page', () => {
   });
 
   it('should display users in table', async () => {
-    renderWithRouter(<UserManagement />);
+  const db = await import('../../services/database');
+  db.getUsers.mockResolvedValue(mockUsers);
+  db.getColleges.mockResolvedValue(mockColleges);
+  renderWithRouter(<UserManagement />);
     
     await waitFor(() => {
       expect(screen.getByText('John Doe')).toBeInTheDocument();
@@ -188,8 +191,9 @@ describe('UserManagement Page', () => {
   it('should delete user when delete button is clicked', async () => {
     const user = userEvent.setup();
     window.confirm = vi.fn(() => true);
-    mockDeleteUser.mockResolvedValue({});
-    
+    const db = await import('../../services/database');
+    db.deleteUser.mockResolvedValue({});
+
     renderWithRouter(<UserManagement />);
     
     await waitFor(() => {
@@ -199,7 +203,7 @@ describe('UserManagement Page', () => {
     
     await waitFor(() => {
       expect(window.confirm).toHaveBeenCalledWith('Delete this user?');
-      expect(mockDeleteUser).toHaveBeenCalledWith('user-1');
+      expect(db.deleteUser).toHaveBeenCalledWith('user-1');
     });
   });
 
@@ -238,7 +242,8 @@ describe('UserManagement Page', () => {
       }
     ];
     
-  dbMocks.getAssetsByUploader.mockResolvedValue(mockDocuments);
+  const db = await import('../../services/database');
+  db.getAssetsByUploader.mockResolvedValue(mockDocuments);
     
     const user = userEvent.setup();
     renderWithRouter(<UserManagement />);

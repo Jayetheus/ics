@@ -17,6 +17,7 @@ import { Student, Course, Result, Timetable, Payment, Ticket, Asset, Application
 import type { College, Lecturer, User } from '../types';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 
+
 // @section: Users (Unified User Management)
 export const createUser = async (userData: Partial<User>, password: string): Promise<User> => {
   // Create Firebase Auth user
@@ -43,7 +44,7 @@ export const createUser = async (userData: Partial<User>, password: string): Pro
 
   // Use merge to avoid overwriting any fields if a document already exists
   await setDoc(doc(db, 'users', uid), userDoc, { merge: true });
-
+  
   return userDoc as User;
 };
 
@@ -74,6 +75,58 @@ export const updateUser = async (uid: string, data: Partial<User>): Promise<User
 
 export const deleteUser = async (uid: string): Promise<void> => {
   await deleteDoc(doc(db, 'users', uid));
+};
+
+/**
+ * deleteUserAndRelatedData
+ * Removes Firestore documents that belong to the given user uid. This does
+ * NOT delete the user's Firebase Auth account (admin-only). Use
+ * `requestAuthDeletion` from `src/services/firebase.ts` to request server-side
+ * deletion of the auth account.
+ */
+export const deleteUserAndRelatedData = async (uid: string) => {
+  // Delete top-level user doc
+  await deleteDoc(doc(db, 'users', uid));
+
+  // Helper to delete all docs matching a query
+  const deleteMatching = async (collectionName: string, field: string) => {
+    const q = query(collection(db, collectionName), where(field, '==', uid));
+    const snaps = await getDocs(q);
+    const deletes = snaps.docs.map(d => deleteDoc(doc(db, collectionName, d.id)));
+    await Promise.all(deletes);
+  };
+
+  // Common places where user-owned docs may exist
+  await Promise.all([
+    deleteMatching('attendanceRecords', 'studentId'),
+    deleteMatching('attendanceSessions', 'lecturerId'),
+    deleteMatching('results', 'uid'),
+    deleteMatching('payments', 'studentId'),
+    deleteMatching('tickets', 'studentId'),
+    deleteMatching('applications', 'studentId'),
+    deleteMatching('assets', 'uploadedBy')
+  ]);
+};
+
+/**
+ * deleteUserFull
+ * Convenience wrapper that removes Firestore documents and attempts to
+ * request deletion of the Auth user via the configured server endpoint.
+ * This function is safe to call from the client; if the endpoint is not
+ * configured it will still remove Firestore metadata.
+ */
+export const deleteUserFull = async (uid: string) => {
+  await deleteUserAndRelatedData(uid);
+  try {
+    // Lazy import to avoid circular imports
+    const fb = await import('./firebase');
+    if (fb.requestAuthDeletion) {
+      await fb.requestAuthDeletion(uid);
+    }
+  } catch (err) {
+    // Log and continue — Auth deletion is best-effort from client
+    console.warn('Auth deletion request failed or endpoint not configured', err);
+  }
 };
 
 // Legacy Student functions for backward compatibility

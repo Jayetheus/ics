@@ -176,7 +176,7 @@ const Timetable: React.FC = () => {
                               </div>
                               <div className="flex items-center text-xs opacity-75">
                                 <User className="h-3 w-3 mr-1" />
-                                {lecturers.filter((lecturer: any) => lecturer.uid === classItem.lecturerId)[0].firstName} {lecturers.filter((lecturer: any) => lecturer.uid === classItem.lecturerId)[0].lastName}
+                                {lecturers.filter((lecturer: any) => lecturer.uid === classItem.lecturerId)[0]?.firstName} {lecturers.filter((lecturer: any) => lecturer.uid === classItem.lecturerId)[0]?.lastName}
                               </div>
                               <div className="flex items-center text-xs opacity-75">
                                 <Clock className="h-3 w-3 mr-1" />
@@ -232,7 +232,7 @@ const Timetable: React.FC = () => {
                               </div>
                               <div className="flex items-center">
                                 <User className="h-4 w-4 mr-2" />
-                                {lecturers.filter((lecturer: any) => lecturer.uid === classItem.lecturerId)[0].firstName} {lecturers.filter((lecturer: any) => lecturer.uid === classItem.lecturerId)[0].lastName}
+                                {lecturers.filter((lecturer: any) => lecturer.uid === classItem.lecturerId)[0]?.firstName} {lecturers.filter((lecturer: any) => lecturer.uid === classItem.lecturerId)[0]?.lastName}
                               </div>
                             </div>
                           </div>
