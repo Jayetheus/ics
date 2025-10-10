@@ -27,27 +27,17 @@ vi.mock('../../context/NotificationContext', () => ({
   })
 }));
 
-// Mock the database functions (named mocks)
-const mockGetUsers = vi.fn();
-const mockGetColleges = vi.fn();
-const mockCreateUser = vi.fn();
-const mockUpdateUser = vi.fn();
-const mockDeleteUser = vi.fn();
-const mockCreateLecturer = vi.fn();
-const mockGetAssetsByUploader = vi.fn();
-const mockCreateAsset = vi.fn();
-const mockDeleteAsset = vi.fn();
-
+// Mock the database functions
 vi.mock('../../services/database', () => ({
-  getUsers: mockGetUsers,
-  getColleges: mockGetColleges,
-  createUser: mockCreateUser,
-  updateUser: mockUpdateUser,
-  deleteUser: mockDeleteUser,
-  createLecturer: mockCreateLecturer,
-  getAssetsByUploader: mockGetAssetsByUploader,
-  createAsset: mockCreateAsset,
-  deleteAsset: mockDeleteAsset
+  getUsers: vi.fn(),
+  getColleges: vi.fn(),
+  createUser: vi.fn(),
+  updateUser: vi.fn(),
+  deleteUser: vi.fn(),
+  createLecturer: vi.fn(),
+  getAssetsByUploader: vi.fn(),
+  createAsset: vi.fn(),
+  deleteAsset: vi.fn(),
 }));
 
 // Mock the email service
@@ -248,7 +238,7 @@ describe('UserManagement Page', () => {
       }
     ];
     
-    mockGetAssetsByUploader.mockResolvedValue(mockDocuments);
+  dbMocks.getAssetsByUploader.mockResolvedValue(mockDocuments);
     
     const user = userEvent.setup();
     renderWithRouter(<UserManagement />);

@@ -109,6 +109,60 @@ const TimetableManagement: React.FC = () => {
     }
   };
 
+  // Helper: convert HH:MM to minutes since midnight
+  const timeToMinutes = (t: string) => {
+    const [hh, mm] = t.split(':').map(Number);
+    return hh * 60 + mm;
+  };
+
+  // Check if two time ranges overlap
+  const timesOverlap = (startA: string, endA: string, startB: string, endB: string) => {
+    const a1 = timeToMinutes(startA);
+    const a2 = timeToMinutes(endA);
+    const b1 = timeToMinutes(startB);
+    const b2 = timeToMinutes(endB);
+    return a1 < b2 && b1 < a2;
+  };
+
+  // Check for clashes (subject or venue) against current timetable entries
+  // excludeId is optional (used when editing to ignore the entry being edited)
+  const findClashes = (entry: Partial<Timetable>, excludeId?: string) => {
+    const clashes: string[] = [];
+    const day = entry.day;
+    const start = entry.startTime || '';
+    const end = entry.endTime || '';
+    const venue = entry.venue || '';
+    const subjectCode = entry.subjectCode || '';
+    const year = entry.year ?? selectedYear;
+    const semester = entry.semester ?? selectedSemester;
+
+    timetable.forEach((e) => {
+      if (excludeId && e.id === excludeId) return;
+      // only compare same day, same semester and year
+      if (e.day !== day) return;
+      if (e.semester !== semester) return;
+      if (e.year !== year) return;
+
+      if (timesOverlap(start, end, e.startTime, e.endTime)) {
+        // venue clash
+        if (venue && e.venue === venue) {
+          clashes.push(`Venue clash with ${e.courseCode} ${e.subjectName} (${e.startTime}-${e.endTime}) at ${venue}`);
+        }
+        // subject clash
+        if (subjectCode && e.subjectCode === subjectCode) {
+          clashes.push(`Subject ${subjectCode} already scheduled for ${e.courseCode} (${e.startTime}-${e.endTime})`);
+        }
+        // lecturer clash
+        if (entry.lecturerId && e.lecturerId === entry.lecturerId) {
+          const lecturerName = e.lecturerName || `${e.lecturerId}`;
+          clashes.push(`Lecturer ${lecturerName} already has a class (${e.courseCode} ${e.subjectName}) ${e.startTime}-${e.endTime} at ${e.venue}`);
+        }
+      }
+    });
+
+    return clashes;
+  };
+
   const handleAddEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCourse) {
@@ -125,7 +179,7 @@ const TimetableManagement: React.FC = () => {
       const lecturer = lecturers.find(l => l.uid === newEntry.lecturerId);
       const subject = subjects.find(s => s.code === newEntry.subjectCode);
 
-      const entryData: Omit<Timetable, 'id' | 'createdAt' | 'updatedAt'> = {
+  const entryData: Omit<Timetable, 'id' | 'createdAt' | 'updatedAt'> = {
         courseCode: selectedCourse,
         courseName: course?.name || '',
         subjectCode: newEntry.subjectCode || '',
@@ -140,6 +194,13 @@ const TimetableManagement: React.FC = () => {
         semester: selectedSemester,
         year: selectedYear,
       };
+
+      // check for clashes before saving
+      const clashes = findClashes(entryData);
+      if (clashes.length > 0) {
+        addNotification({ type: 'error', title: 'Clash Detected', message: clashes.join('; ') });
+        return;
+      }
 
       await createTimetableEntry(entryData);
       await fetchTimetable();
@@ -182,11 +243,20 @@ const TimetableManagement: React.FC = () => {
       const lecturer = lecturers.find(l => l.uid === editingEntry.lecturerId);
       const subject = subjects.find(s => s.code === editingEntry.subjectCode);
 
-      await updateTimetableEntry(editingEntry.id, {
+      const updatedData = {
         ...editingEntry,
         lecturerName: lecturer ? `${lecturer.firstName} ${lecturer.lastName}` : editingEntry.lecturerName,
         subjectName: subject?.name || editingEntry.subjectName,
-      });
+      } as Partial<Timetable>;
+
+      // check for clashes excluding the entry being edited
+      const clashes = findClashes(updatedData, editingEntry.id);
+      if (clashes.length > 0) {
+        addNotification({ type: 'error', title: 'Clash Detected', message: clashes.join('; ') });
+        return;
+      }
+
+      await updateTimetableEntry(editingEntry.id, updatedData as any);
 
       await fetchTimetable();
       setEditingEntry(null);

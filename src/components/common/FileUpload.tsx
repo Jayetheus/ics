@@ -6,7 +6,7 @@ import { useNotification } from '../../context/NotificationContext';
 import LoadingSpinner from './LoadingSpinner';
 
 interface FileUploadProps {
-  onUpload: (fileData: any) => void;
+  onUpload: (value?: any) => void;
   accept?: string;
   maxSize?: number; // in MB
   folder?: string;
@@ -72,13 +72,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                    file.type.startsWith('video/') ? 'video' : 'other'
         });
         
-        onUpload({
-          ...uploadedFile,
-          id: assetId,
-          category: file.type.startsWith('image/') ? 'image' : 
-                   file.type.includes('pdf') || file.type.includes('document') ? 'document' :
-                   file.type.startsWith('video/') ? 'video' : 'other'
-        });
+        onUpload();
       }
       
       addNotification({

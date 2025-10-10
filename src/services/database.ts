@@ -466,17 +466,19 @@ export const getSubjectsByCourse = async (courseCode: string) => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
 };
 
-export const getStudentSubjects = async (subjectCodes: string[]) => {
-  const courses = [] as Subject[];
+export const getStudentSubjects = async (uid: string) => {
+  const q = query(collection(db, 'users'), where("uid", "==", uid))
+  const snapShot = (await getDocs(q)).docs[0];
 
-  subjectCodes.forEach(async code => {
-    const q = query(collection(db, 'subjects'), where('code', '==', code));
-    const querySnapshot = await getDocs(q);
-    console.log(querySnapshot.docs[0].data())
-    courses.push(querySnapshot.docs[0].data() as Subject)
-  })
+  if(snapShot.exists()){
+    const userData = snapShot.data() as User;
+    const q2 = query(collection(db, 'subjects'), where("code","in",userData.enrolledSubjects))
+    const subjectsSnapshot = (await getDocs(q2)).docs;
+    const subjects = subjectsSnapshot.map(snap => snap.data());
+    return subjects as Subject[];
+  }
   
-  return courses as Subject[];
+  else return [];
 }
 
 // @endsection
@@ -742,7 +744,7 @@ const deleteLecturer = async (id: string) => {
 // Generate student number in format: YYYY + sequential number (e.g., 2024001234)
 export const generateStudentNumber = async (): Promise<string> => {
   const currentYear = new Date().getFullYear();
-  const studentsRef = collection(db, 'students');
+  const studentsRef = collection(db, 'users');
   const q = query(studentsRef, where('studentNumber', '>=', `${currentYear}000000`), where('studentNumber', '<', `${currentYear + 1}000000`));
   const snapshot = await getDocs(q);
 
@@ -752,7 +754,7 @@ export const generateStudentNumber = async (): Promise<string> => {
 
 // Generate staff number in format: LEC + sequential number (e.g., LEC001234)
 export const generateStaffNumber = async (): Promise<string> => {
-  const lecturersRef = collection(db, 'lecturers');
+  const lecturersRef = collection(db, 'users');
   const q = query(lecturersRef, where('staffNumber', '>=', 'LEC000000'), where('staffNumber', '<', 'LEC999999'));
   const snapshot = await getDocs(q);
 

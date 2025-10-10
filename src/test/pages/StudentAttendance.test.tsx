@@ -27,15 +27,12 @@ vi.mock('../../context/NotificationContext', () => ({
   })
 }));
 
-// Mock the database functions (named mocks so tests can reference them)
-const mockGetAttendanceRecordsByStudent = vi.fn();
-const mockCreateAttendanceRecord = vi.fn();
-const mockCheckStudentAttendance = vi.fn();
-
+// Mock the database functions (use a shared object so the hoisted mock factory
+// can populate the functions without referencing uninitialized bindings)
 vi.mock('../../services/database', () => ({
-  getAttendanceRecordsByStudent: mockGetAttendanceRecordsByStudent,
-  createAttendanceRecord: mockCreateAttendanceRecord,
-  checkStudentAttendance: mockCheckStudentAttendance
+  getAttendanceRecordsByStudent: vi.fn(),
+  createAttendanceRecord: vi.fn(),
+  checkStudentAttendance: vi.fn(),
 }));
 
 // Mock QR code utilities
@@ -115,7 +112,8 @@ describe('StudentAttendance Page', () => {
       }
     ];
     
-    mockGetAttendanceRecordsByStudent.mockResolvedValue(mockRecords);
+  const db = await import('../../services/database');
+  db.getAttendanceRecordsByStudent.mockResolvedValue(mockRecords);
     
     renderWithRouter(<StudentAttendance />);
     
@@ -125,7 +123,8 @@ describe('StudentAttendance Page', () => {
   });
 
   it('should show empty state when no attendance records', async () => {
-    mockGetAttendanceRecordsByStudent.mockResolvedValue([]);
+  const db = await import('../../services/database');
+  db.getAttendanceRecordsByStudent.mockResolvedValue([]);
     
     renderWithRouter(<StudentAttendance />);
     
@@ -144,8 +143,9 @@ describe('StudentAttendance Page', () => {
       type: 'attendance'
     });
     (isQRCodeExpired as Mock).mockReturnValue(false);
-    mockCheckStudentAttendance.mockResolvedValue(false);
-    mockCreateAttendanceRecord.mockResolvedValue({});
+  const db = await import('../../services/database');
+  db.checkStudentAttendance.mockResolvedValue(false);
+  db.createAttendanceRecord.mockResolvedValue({});
     
     renderWithRouter(<StudentAttendance />);
     
@@ -157,7 +157,8 @@ describe('StudentAttendance Page', () => {
     
     await waitFor(() => {
       expect(parseQRCode).toHaveBeenCalledWith('test-qr-data');
-      expect(mockCheckStudentAttendance).toHaveBeenCalledWith('session-123', 'test-student-id');
+  const db = await import('../../services/database');
+  expect(db.checkStudentAttendance).toHaveBeenCalledWith('session-123', 'test-student-id');
     });
   });
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, Search, Filter, Plus, Edit, Eye, Trash2, Download, Loader2, 
-  FileText, Upload, X, Phone, MapPin, GraduationCap, 
+import {
+  Users, Search, Filter, Plus, Edit, Eye, Trash2, Download, Loader2,
+  FileText, Upload, X, Phone, MapPin, GraduationCap,
   User as UserIcon, Mail, Shield, Clock,
   Image, FolderOpen
 } from 'lucide-react';
@@ -31,7 +31,7 @@ const UserManagement: React.FC = () => {
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const [editUser, setEditUser] = useState<Partial<User>>({});
   const [adding, setAdding] = useState(false);
-  
+
   // User details modal states
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
@@ -66,7 +66,7 @@ const UserManagement: React.FC = () => {
     const matchesSearch =
       user.firstName?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
 
-      
+
       user.lastName?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm?.toLowerCase());
     const matchesFilter = filterRole === 'all' || user.role === filterRole;
@@ -97,11 +97,11 @@ const UserManagement: React.FC = () => {
         const created = await createUser(newUser, password);
         setUsers([...users, created]);
       }
-      
+
 
       emailService.sendEmail(
         {
-          to: newUser.email ,
+          to: newUser.email,
           body: `Greetings ${newUser.firstName} ${newUser.lastName},\n
            A new account has been created for you with these details:\n
            email: ${newUser.email}\n
@@ -166,7 +166,7 @@ const UserManagement: React.FC = () => {
     setSelectedUser(user);
     setShowUserDetails(true);
     setLoadingDocuments(true);
-    
+
     try {
       const documents = await getAssetsByUploader(user.uid);
       setUserDocuments(documents);
@@ -196,11 +196,11 @@ const UserManagement: React.FC = () => {
       };
 
       await createAsset(assetData as any);
-      
+
       // Refresh documents list
-  const documents = await getAssetsByUploader(selectedUser.uid);
+      const documents = await getAssetsByUploader(selectedUser.uid);
       setUserDocuments(documents);
-      
+
       addNotification({
         type: 'success',
         title: 'Document Uploaded',
@@ -220,9 +220,9 @@ const UserManagement: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this document?')) return;
 
     try {
-  await deleteAsset(documentId);
-  setUserDocuments(userDocuments.filter(doc => doc.id !== documentId));
-      
+      await deleteAsset(documentId);
+      setUserDocuments(userDocuments.filter(doc => doc.id !== documentId));
+
       addNotification({
         type: 'success',
         title: 'Document Deleted',
@@ -373,7 +373,7 @@ const UserManagement: React.FC = () => {
               value={newUser.email || ''}
               onChange={e => setNewUser({ ...newUser, email: e.target.value })}
               className="border px-3 py-2 rounded w-full"
-            /> 
+            />
             <input
               type="password"
               required
@@ -393,7 +393,7 @@ const UserManagement: React.FC = () => {
                 <option key={role} value={role}>{role}</option>
               ))}
             </select>
-            
+
             {/* Lecturer-specific fields */}
             {newUser.role === 'lecturer' && (
               <>
@@ -409,7 +409,7 @@ const UserManagement: React.FC = () => {
                       <option key={dept} value={dept}>{dept}</option>
                     ))}
                   </select>
-                  
+
                   <select
                     required
                     value={newLecturer.collegeId || ''}
@@ -422,7 +422,7 @@ const UserManagement: React.FC = () => {
                     ))}
                   </select>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <input
                     type="tel"
@@ -431,7 +431,7 @@ const UserManagement: React.FC = () => {
                     onChange={e => setNewLecturer({ ...newLecturer, phone: e.target.value })}
                     className="border px-3 py-2 rounded w-full"
                   />
-                  
+
                   <input
                     type="text"
                     placeholder="Address (optional)"
@@ -440,7 +440,7 @@ const UserManagement: React.FC = () => {
                     className="border px-3 py-2 rounded w-full"
                   />
                 </div>
-                
+
                 <textarea
                   placeholder="Qualifications (optional)"
                   value={newLecturer.qualifications || ''}
@@ -451,7 +451,7 @@ const UserManagement: React.FC = () => {
               </>
             )}
             <div className="flex gap-2">
-              <button disabled={adding} type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">{adding? <Loader2 className='animate-spin'/> : "Add"}</button>
+              <button disabled={adding} type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">{adding ? <Loader2 className='animate-spin' /> : "Add"}</button>
               <button type="button" className="px-4 py-2 rounded border" onClick={() => setShowAddForm(false)}>Cancel</button>
             </div>
           </form>
@@ -542,27 +542,26 @@ const UserManagement: React.FC = () => {
                     {user.email}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                      user.role === 'lecturer' ? 'bg-green-100 text-green-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-red-100 text-red-800' :
+                        user.role === 'lecturer' ? 'bg-green-100 text-green-800' :
+                          'bg-blue-100 text-blue-800'
+                      }`}>
                       {user.role}
                     </span>
                   </td>
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-          {user.role === 'lecturer' ? (
-            <div>
-              <div className="font-medium">{user.department || 'N/A'}</div>
-              <div className="text-xs text-gray-500">Staff: {user.staffNumber || 'N/A'}</div>
-            </div>
-          ) : (
-            <div className="text-gray-400">-</div>
-          )}
-        </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {user.role === 'lecturer' ? (
+                      <div>
+                        <div className="font-medium">{user.department || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">Staff: {user.staffNumber || 'N/A'}</div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-400">-</div>
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <button 
+                      <button
                         className="text-blue-600 hover:text-blue-900"
                         onClick={() => handleViewUserDetails(user)}
                         title="View Details"
@@ -652,11 +651,10 @@ const UserManagement: React.FC = () => {
                     <Shield className="h-5 w-5 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-600">Role</p>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        selectedUser.role === 'admin' ? 'bg-red-100 text-red-800' :
-                        selectedUser.role === 'lecturer' ? 'bg-green-100 text-green-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${selectedUser.role === 'admin' ? 'bg-red-100 text-red-800' :
+                          selectedUser.role === 'lecturer' ? 'bg-green-100 text-green-800' :
+                            'bg-blue-100 text-blue-800'
+                        }`}>
                         {selectedUser.role}
                       </span>
                     </div>
@@ -666,11 +664,10 @@ const UserManagement: React.FC = () => {
                     <Clock className="h-5 w-5 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-600">Status</p>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        selectedUser.status === 'active' ? 'bg-green-100 text-green-800' :
-                        selectedUser.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${selectedUser.status === 'active' ? 'bg-green-100 text-green-800' :
+                          selectedUser.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                            'bg-red-100 text-red-800'
+                        }`}>
                         {selectedUser.status}
                       </span>
                     </div>

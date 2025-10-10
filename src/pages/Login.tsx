@@ -41,8 +41,7 @@ const Login: React.FC = () => {
         title: 'Login Successful',
         message: 'Welcome back! You have been logged in successfully.',
       });
-      
-      navigate("/", { replace: true });
+      // Do not navigate immediately — wait for auth state change to update currentUser
     } catch (error: any) {
       addNotification({
         type: 'error',

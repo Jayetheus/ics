@@ -5,7 +5,6 @@ import {
   MapPin, 
   Users, 
   Play, 
-  Stop, 
   Download,
   Calendar,
   BookOpen,

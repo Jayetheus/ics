@@ -14,6 +14,7 @@ const FinalizeRegistration: React.FC = () => {
   const navigate = useNavigate();
   const [approvedApp, setApprovedApp] = useState<Application | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [enrolledSubjects, setEnrolledSubjects] = useState<string[]>([]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [year, setYear] = useState<number>(1);
   const [registered, setRegistered] = useState(false);
@@ -29,17 +30,7 @@ const FinalizeRegistration: React.FC = () => {
         const apps = await getApplicationsByStudent(currentUser.uid);
         const app = apps.find(a => a.status === 'approved') || null;
         setApprovedApp(app);
-        if (app) {
-          const subs = await getSubjectsByCourse(app.courseCode);
-          setSubjects(subs);
-          // Pre-select required subjects
-          const defaultSelected = Object.fromEntries(
-            subs.map(s => [s.code, s.credits >= 6]) // Auto-select major subjects
-          );
-          setSelected(defaultSelected);
-          const selectedFinances = subs.filter(sub => defaultSelected[sub.code]).map(value => ({ detail: value.code, amount: value.amount }));
-          setFinances(selectedFinances);
-        }
+
         // Check if student already registered in students collection
         const reg = await getStudentRegistration(currentUser.uid);
         if (reg && reg.course) {
@@ -47,6 +38,27 @@ const FinalizeRegistration: React.FC = () => {
           // if registered, default to subject selection step
           setStep(2);
           if (reg.year) setYear(reg.year);
+          const existing = (reg.subjects ?? reg.enrolledSubjects ?? reg.selectedSubjects ?? []) as string[];
+          setEnrolledSubjects(existing);
+          setFinances(reg.finances ?? []);
+        }
+
+        if (app) {
+          const subs = await getSubjectsByCourse(app.courseCode);
+          // If already enrolled, only show remaining subjects
+          const remaining = subs.filter(s => !((reg && (reg.subjects ?? reg.enrolledSubjects ?? reg.selectedSubjects)) ?? []).includes(s.code));
+          setSubjects(remaining);
+
+          const defaultSelected = Object.fromEntries(
+            remaining.map(s => [s.code, s.credits >= 6])
+          );
+          setSelected(defaultSelected);
+          const selectedFinances = remaining.filter(sub => defaultSelected[sub.code]).map(value => ({ detail: value.code, amount: value.amount }));
+          if (!reg || !reg.course) {
+            setFinances(selectedFinances);
+          } else {
+            setFinances(prev => [...(prev || []), ...selectedFinances]);
+          }
         }
       } catch (error) {
         addNotification({
@@ -65,7 +77,14 @@ const FinalizeRegistration: React.FC = () => {
     const updatedSelected = ({ ...selected, [code]: !selected[code] });
     setSelected(prev => ({ ...prev, [code]: !prev[code] }));
     const selectedFinances = subjects.filter(sub => updatedSelected[sub.code]).map(value => ({ detail: value.code, amount: value.amount }));
-    setFinances(selectedFinances)
+    if (registered) {
+      setFinances(prev => {
+        const newOnes = selectedFinances.filter(sf => !(prev || []).some(p => p.detail === sf.detail));
+        return [...(prev || []), ...newOnes];
+      });
+    } else {
+      setFinances(selectedFinances);
+    }
   }
 
   const finalize = async () => {
@@ -82,29 +101,31 @@ const FinalizeRegistration: React.FC = () => {
       return;
     }
 
-    const updatedFinances = [...finances, { detail: `${new Date().getFullYear()} registration fee`, amount: 1500 }]
-
     try {
       setFinalizing(true);
-      await enrollStudentSubjects(currentUser.uid, chosen);
-      await updateFinancesByStudentId(currentUser.uid, updatedFinances);
-      await registerStudent(currentUser, approvedApp)
-
-      addNotification({
-        type: 'success',
-        title: 'Registration Complete!',
-        message: 'Your registration has been finalized successfully.',
-      });
+      if (registered) {
+        // Add subjects flow
+        await enrollStudentSubjects(currentUser.uid, chosen);
+        const addedFinances = subjects.filter(s => chosen.includes(s.code)).map(s => ({ detail: s.code, amount: s.amount }));
+        const newFinances = [...(finances || []), ...addedFinances];
+        await updateFinancesByStudentId(currentUser.uid, newFinances);
+        addNotification({ type: 'success', title: 'Subjects Added', message: 'Selected subjects have been added to your registration.' });
+      } else {
+        // Fresh registration flow includes registration fee
+        const updatedFinances = [...finances, { detail: `${new Date().getFullYear()} registration fee`, amount: 1500 }]
+        await enrollStudentSubjects(currentUser.uid, chosen);
+        await updateFinancesByStudentId(currentUser.uid, updatedFinances);
+        await registerStudent(currentUser, approvedApp)
+        addNotification({ type: 'success', title: 'Registration Complete!', message: 'Your registration has been finalized successfully.' });
+      }
 
       // Navigate to finance page for payment
-      setTimeout(() => {
-        navigate('/finance');
-      }, 2000);
+      setTimeout(() => navigate('/finance'), 1200);
 
     } catch (error) {
       addNotification({
         type: 'error',
-        title: 'Registration Failed',
+        title: registered ? 'Add Subjects Failed' : 'Registration Failed',
         message: 'Failed to finalize registration. Please try again.',
       });
       console.error('Finalize Registration Error:', error);
@@ -153,10 +174,10 @@ const FinalizeRegistration: React.FC = () => {
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-green-600 to-green-800 rounded-lg p-6 text-white">
-        <div className="flex items-center">
+          <div className="flex items-center">
           <CheckCircle className="h-8 w-8 mr-3" />
           <div>
-            <h1 className="text-2xl font-bold">Finalize Your Registration</h1>
+            <h1 className="text-2xl font-bold">{registered ? 'Add Subjects to Your Registration' : 'Finalize Your Registration'}</h1>
             <p className="mt-1 opacity-90">Course: {approvedApp.courseCode}</p>
           </div>
         </div>
@@ -296,9 +317,15 @@ const FinalizeRegistration: React.FC = () => {
                 <div className="space-y-2 text-sm">
                   <div><span className="text-gray-600">Course:</span> {approvedApp.courseCode}</div>
                   <div><span className="text-gray-600">Year:</span> {year}</div>
-                  <div><span className="text-gray-600">Registration: R </span>1500</div>
+                  <div>
+                    <span className="text-gray-600">Registration: </span>
+                    {registered ? <span className="text-gray-700">Already registered</span> : <span className="text-gray-700">R 1500</span>}
+                  </div>
                   <div><span className="text-gray-600">Total Credits:</span> {totalCredits}</div>
-                  <div><span className="text-gray-600">Total Amount:R </span> {finances.map(fin => fin.amount).reduce((acc, cur) => acc + cur, 0) + 1500}</div>
+                  <div>
+                    <span className="text-gray-600">Total Amount: R </span>
+                    { (finances.map(fin => fin.amount).reduce((acc, cur) => acc + cur, 0)) + (registered ? 0 : 1500) }
+                  </div>
                 </div>
               </div>
 

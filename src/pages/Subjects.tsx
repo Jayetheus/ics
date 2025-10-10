@@ -19,7 +19,7 @@ const Subjects: React.FC = () => {
         const courseCodes = currentUser?.enrolledSubjects;
         if (courseCodes) {
           const [subs, studentResults] = await Promise.all([
-            getStudentSubjects(currentUser.enrolledSubjects as string[]),
+            getStudentSubjects(currentUser.uid),
             getResultsByStudent(currentUser.uid)
           ]);
           setSubjects(subs);
@@ -32,7 +32,7 @@ const Subjects: React.FC = () => {
       }
     };
     load();
-  }, [currentUser]);
+  }, [currentUser, subjects]);
 
   const getSubjectResult = (subjectCode: string) => {
     return results.find(result => result.subjectCode === subjectCode || result.courseCode === subjectCode);
