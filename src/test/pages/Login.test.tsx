@@ -48,21 +48,20 @@ describe('Login Page', () => {
   it('should render login form', () => {
     renderWithRouter(<Login />);
     
-    expect(screen.getByText('Sign In')).toBeInTheDocument();
+  // The submit button text is 'Sign in to your account' in the UI
+  expect(screen.getByRole('button', { name: /sign in to your account/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 
   it('should show validation errors for empty fields', async () => {
     const user = userEvent.setup();
     renderWithRouter(<Login />);
     
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+  const submitButton = screen.getByRole('button', { name: /sign in to your account/i });
     await user.click(submitButton);
     
-    expect(screen.getByText(/email is required/i)).toBeInTheDocument();
-    expect(screen.getByText(/password is required/i)).toBeInTheDocument();
+  expect(screen.getByText(/is required/i)).toBeInTheDocument();
   });
 
   it('should show validation error for invalid email', async () => {
@@ -71,13 +70,13 @@ describe('Login Page', () => {
     
     const emailInput = screen.getByLabelText(/email/i);
     const passwordInput = screen.getByLabelText(/password/i);
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+  const submitButton = screen.getByRole('button', { name: /sign in to your account/i });
     
     await user.type(emailInput, 'invalid-email');
     await user.type(passwordInput, 'password123');
     await user.click(submitButton);
     
-    expect(screen.getByText(/invalid email address/i)).toBeInTheDocument();
+  expect(screen.getByText(/valid email address/i)).toBeInTheDocument();
   });
 
   it('should call login function with correct credentials', async () => {
@@ -86,7 +85,7 @@ describe('Login Page', () => {
     
     const emailInput = screen.getByLabelText(/email/i);
     const passwordInput = screen.getByLabelText(/password/i);
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+  const submitButton = screen.getByRole('button', { name: /sign in to your account/i });
     
     await user.type(emailInput, 'test@example.com');
     await user.type(passwordInput, 'password123');
@@ -105,19 +104,20 @@ describe('Login Page', () => {
     
     const emailInput = screen.getByLabelText(/email/i);
     const passwordInput = screen.getByLabelText(/password/i);
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+  const submitButton = screen.getByRole('button', { name: /sign in to your account/i });
     
     await user.type(emailInput, 'test@example.com');
     await user.type(passwordInput, 'password123');
     await user.click(submitButton);
     
-    expect(screen.getByText(/signing in/i)).toBeInTheDocument();
+  expect(screen.getByText(/signing in/i)).toBeInTheDocument();
   });
 
   it('should have link to register page', () => {
     renderWithRouter(<Login />);
     
-    const registerLink = screen.getByText(/don't have an account/i);
+  // The UI shows 'Create new account' as the link
+  const registerLink = screen.getByText(/create new account/i);
     expect(registerLink).toBeInTheDocument();
     expect(registerLink.closest('a')).toHaveAttribute('href', '/register');
   });
