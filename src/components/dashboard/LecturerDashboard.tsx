@@ -494,41 +494,6 @@ const LecturerDashboard: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-sm border">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <button className="flex flex-col items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
-              <FileText className="h-8 w-8 text-green-600 mb-2" />
-              <span className="text-sm font-medium text-green-900">Enter Grades</span>
-            </button>
-            
-            <button className="flex flex-col items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
-              <Users className="h-8 w-8 text-blue-600 mb-2" />
-              <span className="text-sm font-medium text-blue-900">View Students</span>
-            </button>
-            
-            <button className="flex flex-col items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
-              <Calendar className="h-8 w-8 text-purple-600 mb-2" />
-              <span className="text-sm font-medium text-purple-900">Update Schedule</span>
-            </button>
-            
-            <button className="flex flex-col items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors">
-              <QrCode className="h-8 w-8 text-orange-600 mb-2" />
-              <span className="text-sm font-medium text-orange-900">Take Attendance</span>
-            </button>
-            
-            <button className="flex flex-col items-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
-              <BarChart3 className="h-8 w-8 text-indigo-600 mb-2" />
-              <span className="text-sm font-medium text-indigo-900">Manage Results</span>
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
