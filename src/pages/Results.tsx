@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, TrendingUp, Award, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getResultsByStudent } from '../services/database';
-import { Result } from '../types';
+import { getCourses, getResultsByStudent } from '../services/database';
+import { Course, Result } from '../types';
 
 const Results: React.FC = () => {
   const { currentUser } = useAuth();
   const [results, setResults] = useState<Result[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSemester, setSelectedSemester] = useState('all');
   const [selectedYear, setSelectedYear] = useState('all');
@@ -16,8 +17,9 @@ const Results: React.FC = () => {
       if (!currentUser) return;
       
       try {
-        const resultsData = await getResultsByStudent(currentUser.uid);
+        const [resultsData, coursesData] = await Promise.all([getResultsByStudent(currentUser.uid), getCourses()]);
         setResults(resultsData);
+        setCourses(coursesData);
       } catch (error) {
         console.error('Error fetching results:', error);
       } finally {
@@ -134,7 +136,7 @@ const Results: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-600">Current Year</p>
-              <p className="text-2xl font-semibold text-gray-900">2024</p>
+              <p className="text-2xl font-semibold text-gray-900">{new Date().getFullYear()}</p>
             </div>
           </div>
         </div>
@@ -211,7 +213,7 @@ const Results: React.FC = () => {
               {filteredResults.map((result) => (
                 <tr key={result.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{result.courseName}</div>
+                    <div className="text-sm font-medium text-gray-900">{courses.find(course => course.code === result.courseCode)?.name}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{result.courseCode}</div>
