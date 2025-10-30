@@ -6,7 +6,7 @@ import {
   signOut,
   onAuthStateChanged
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import { User, UserRole } from '../types';
 
@@ -14,9 +14,11 @@ import { User, UserRole } from '../types';
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
+  error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, role: UserRole, additionalData: any) => Promise<void>;
+  register: (email: string, password: string, role: UserRole, additionalData: Partial<User>) => Promise<void>;
   logout: () => Promise<void>;
+  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,6 +34,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
@@ -69,25 +72,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   const login = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    try {
+      setError(null);
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      setError(errorMessage);
+      throw error;
+    }
   };
 
-  const register = async (email: string, password: string, role: UserRole, additionalData: any) => {
-    const { user } = await createUserWithEmailAndPassword(auth, email, password);
-    const userData = {
-      email,
-      role,
-      uid: user.uid,
-      ...additionalData,
-      createdAt: new Date().toISOString(),
-    };
+  const register = async (email: string, password: string, role: UserRole, additionalData: Partial<User>) => {
+    try {
+      setError(null);
+      const { user } = await createUserWithEmailAndPassword(auth, email, password);
+      const userData: Partial<User> = {
+        uid: user.uid,
+        email,
+        role,
+        status: 'active',
+        ...additionalData,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      };
 
-  // Create user document using auth UID; use merge to be safe if a doc exists
-  await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
+      // Create user document using auth UID; use merge to be safe if a doc exists
+      await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+      setError(errorMessage);
+      throw error;
+    }
   };
 
   const logout = async () => {
-    await signOut(auth);
+    try {
+      setError(null);
+      await signOut(auth);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Logout failed';
+      setError(errorMessage);
+      throw error;
+    }
+  };
+
+  const clearError = () => {
+    setError(null);
   };
 
 
@@ -95,9 +125,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     currentUser,
     loading,
+    error,
     login,
     register,
     logout,
+    clearError,
   };
 
   return (

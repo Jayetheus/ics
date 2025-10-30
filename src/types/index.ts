@@ -29,7 +29,7 @@ export interface User {
   qualifications?: string;
   subjects?: string[]; // Array of subject IDs for lecturers
   enrolledSubjects?: string[]; // Array of subject IDs for students
-  results?: any[]; // For students
+  results?: Result[]; // For students
 }
 
 // Legacy interfaces for backward compatibility - will be deprecated
@@ -59,7 +59,7 @@ export interface Student {
   status: 'active' | 'inactive' | 'suspended';
   registrationDate: string;
   examNumber: string;
-  results: any[];
+  results: Result[];
 }
 
 // Lecturer is now just a User with role='lecturer' - keeping for backward compatibility
@@ -107,11 +107,6 @@ export interface College {
 }
 
 export interface Result {
-  assessmentType: any;
-  assessmentName: any;
-  createdAt: any;
-  createdBy: any;
-  maxMarks: any;
   id: string;
   studentId: string;
   subjectId: string;
@@ -122,6 +117,11 @@ export interface Result {
   grade: string;
   semester: string;
   year: number;
+  assessmentType: string;
+  assessmentName: string;
+  maxMarks: number;
+  createdAt: Timestamp;
+  createdBy: string;
 }
 
 export interface Timetable {
@@ -237,4 +237,14 @@ export interface Asset {
   uploadedAt: string;
   size: number;
   category: 'document' | 'image' | 'video' | 'other';
+}
+
+export interface FinancialRecord {
+  amount: number;
+  detail: string;
+}
+
+export interface StudentFinances {
+  records: FinancialRecord[];
+  total: number;
 }

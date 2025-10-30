@@ -13,7 +13,7 @@ import {
   setDoc
 } from 'firebase/firestore';
 import { db, secondaryAuth } from './firebase';
-import { Student, Course, Result, Timetable, Payment, Ticket, Asset, Application, Subject, AttendanceSession, AttendanceRecord } from '../types';
+import { Course, Result, Timetable, Payment, Ticket, Asset, Application, Subject, AttendanceSession, AttendanceRecord, FinancialRecord, StudentFinances } from '../types';
 import type { College, Lecturer, User } from '../types';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 
@@ -129,15 +129,8 @@ export const deleteUserFull = async (uid: string) => {
   }
 };
 
-// Legacy Student functions for backward compatibility
-const createStudent = async (studentData: any) => {
-  const data = { ...studentData, displayName: `${studentData.profile.firstName} ${studentData.profile.lastName}` }
-  await setDoc(doc(db, 'students', data.uid), {
-    ...data,
-    registrationDate: Timestamp.now(),
-  });
-  return true;
-};
+// Legacy Student functions for backward compatibility - DEPRECATED
+// Use createUser instead
 
 export const getStudents = async () => {
   const q = query(collection(db, "users"), where("role", "==", "student"));
@@ -152,10 +145,7 @@ export const getStudentById = async (id: string) => {
   return docSnap.docs[0].exists() ? { ...docSnap.docs[0].data() } as User : null;
 };
 
-const updateStudent = async (id: string, data: Partial<Student>) => {
-  const docRef = doc(db, 'students', id);
-  await updateDoc(docRef, data);
-};
+// DEPRECATED: Use updateUser instead
 //@endsection
 
 // @section: Courses
@@ -225,30 +215,18 @@ export const getTimetableByCourse = async (courseCode: string, semester?: 1 | 2,
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Timetable));
 };
 
-// Get all courses with timetables
-const getCoursesWithTimetables = async () => {
-  const querySnapshot = await getDocs(collection(db, 'timetable'));
-  const timetables = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Timetable));
 
-  // Get unique courses
-  const courseCodes = [...new Set(timetables.map(t => t.courseCode))];
-  const courses = await Promise.all(
-    courseCodes.map(async (code) => {
-      // Assuming you have a function getCourseByCode
-      const course = await getCourseByCode(code);
-      return course;
-    })
-  );
-
-  return courses.filter((course: any) => course !== null);
-};
-
-const getCourseByCode = async (code: any): Promise<Course> => {
+const getCourseByCode = async (code: string): Promise<Course | null> => {
   const q = query(collection(db, "courses"), where("code", "==", code));
-  const snapShot = (await getDocs(q)).docs[0];
-
-  return { ...snapShot.data() as Course }
-}
+  const snapShot = await getDocs(q);
+  
+  if (snapShot.docs.length === 0) {
+    return null;
+  }
+  
+  const doc = snapShot.docs[0];
+  return { id: doc.id, ...doc.data() } as Course;
+};
 
 // @section: Attendance
 export const createAttendanceSession = async (sessionData: Omit<AttendanceSession, 'id' | 'createdAt' | 'expiresAt'>) => {
@@ -266,11 +244,6 @@ export const getAttendanceSessionsByLecturer = async (lecturerId: string) => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceSession));
 };
 
-const getActiveAttendanceSessions = async () => {
-  const q = query(collection(db, 'attendanceSessions'), where('isActive', '==', true));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceSession));
-};
 
 export const updateAttendanceSession = async (sessionId: string, data: Partial<AttendanceSession>) => {
   const docRef = doc(db, 'attendanceSessions', sessionId);
@@ -410,10 +383,11 @@ export const getApplicationsByStudent = async (studentId: string) => {
 
 export const updateApplicationStatus = async (applicationId: string, status: Application['status'], notes?: string) => {
   const ref = doc(db, 'applications', applicationId);
-  const updateData: any = { status, updatedAt: Timestamp.now() };
-  if (notes) {
-    updateData.notes = notes;
-  }
+  const updateData: Partial<Application> = { 
+    status, 
+    updatedAt: Timestamp.now(),
+    ...(notes && { notes })
+  };
   await updateDoc(ref, updateData);
 };
 
@@ -421,13 +395,14 @@ export const updateApplicationStatus = async (applicationId: string, status: App
 // @endsection
 
 // @section: Registrations
-export const getStudentRegistration = async (studentId: string) => {
+export const getStudentRegistration = async (studentId: string): Promise<User | null> => {
   const q = query(collection(db, 'users'), where('uid', '==', studentId));
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data()} as any))[0];
+  const docs = querySnapshot.docs;
+  return docs.length > 0 ? { uid: docs[0].id, ...docs[0].data() } as User : null;
 }
 
-export async function registerStudent(currentUser: any, approvedApp: Application) {
+export async function registerStudent(currentUser: User, approvedApp: Application) {
   console.log(currentUser.uid && approvedApp)
 
   if (!(currentUser.uid && approvedApp)) throw new Error('Missing parameters');
@@ -436,19 +411,19 @@ export async function registerStudent(currentUser: any, approvedApp: Application
   // Resolve course and college properly to avoid using async callbacks inside Array.filter
   try {
     const course = await getCourseByCode(approvedApp.courseCode).catch(() => null);
-    let collegeData: any = null;
-    if (course && (course as any).collegeId) {
-      const colRef = doc(db, 'colleges', (course as any).collegeId);
+    let collegeData: College | null = null;
+    if (course && course.collegeId) {
+      const colRef = doc(db, 'colleges', course.collegeId);
       const colSnap = await getDoc(colRef);
       if (colSnap.exists()) {
-        collegeData = { id: colSnap.id, ...colSnap.data() };
+        collegeData = { id: colSnap.id, ...colSnap.data() } as College;
       }
     }
 
     await setDoc(studentRef, {
       ...currentUser,
       courseCode: approvedApp.courseCode,
-      college: collegeData ?? (course ? (course as any).collegeId : null),
+      college: collegeData ?? (course ? course.collegeId : null),
       year: 1,
       registrationDate: new Date()
     }, { merge: true });
@@ -567,13 +542,13 @@ export const deleteResult = async (id: string) => {
 // @endsection
 
 // @section: Finances
-export const getFinancesByStudentId = async (id: string) => {
+export const getFinancesByStudentId = async (id: string): Promise<StudentFinances> => {
   const docRef = doc(db, "finance", id);
   const snapShot = await getDoc(docRef);
-  return snapShot.exists() ? snapShot.data() as any : { records: [], total: 0 }
+  return snapShot.exists() ? snapShot.data() as StudentFinances : { records: [], total: 0 };
 }
 
-export const updateFinancesByStudentId = async (id: string, newData: { amount: number, detail: string }[]) => {
+export const updateFinancesByStudentId = async (id: string, newData: FinancialRecord[]) => {
   const docRef = doc(db, "finance", id);
 
   // Get existing data first
@@ -608,23 +583,7 @@ export const deleteTimetableEntry = async (id: string) => {
   await deleteDoc(docRef);
 };
 
-// Delete payment
-const deletePayment = async (id: string) => {
-  const docRef = doc(db, 'payments', id);
-  await deleteDoc(docRef);
-};
-
-// Delete ticket
-const deleteTicket = async (id: string) => {
-  const docRef = doc(db, 'tickets', id);
-  await deleteDoc(docRef);
-};
-
-// Delete application
-const deleteApplication = async (id: string) => {
-  const docRef = doc(db, 'applications', id);
-  await deleteDoc(docRef);
-};
+// REMOVED: unused delete functions. Use exported versions instead.
 
 // Get all applications (for admin)
 export const getAllApplications = async () => {
@@ -641,7 +600,7 @@ export const getAllTickets = async () => {
 };
 
 // Get tickets by status
-const getTicketsByStatus = async (status: Ticket['status']) => {
+export const getTicketsByStatus = async (status: Ticket['status']) => {
   const q = query(
     collection(db, 'tickets'),
     where('status', '==', status),
@@ -652,7 +611,7 @@ const getTicketsByStatus = async (status: Ticket['status']) => {
 };
 
 // Get payments by status
-const getPaymentsByStatus = async (status: Payment['status']) => {
+export const getPaymentsByStatus = async (status: Payment['status']) => {
   const q = query(
     collection(db, 'payments'),
     where('status', '==', status),
@@ -670,14 +629,14 @@ export const getResultsByCourse = async (courseCode: string) => {
 };
 
 // Get timetable by day
-const getTimetableByDay = async (day: string) => {
+export const getTimetableByDay = async (day: string) => {
   const q = query(collection(db, 'timetable'), where('day', '==', day));
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Timetable));
 };
 
 // Get assets by category
-const getAssetsByCategory = async (category: Asset['category']) => {
+export const getAssetsByCategory = async (category: Asset['category']) => {
   const q = query(
     collection(db, 'assets'),
     where('category', '==', category),
@@ -713,7 +672,7 @@ export const enrollStudentSubjects = async (studentId: string, subjectCodes: str
 };
 
 // Populate subjects for a course
-const populateSubjectsForCourse = async (courseName: string) => {
+export const populateSubjectsForCourse = async (courseName: string) => {
   const { COURSE_SUBJECTS } = await import('../data/constants');
   const subjects = COURSE_SUBJECTS[courseName as keyof typeof COURSE_SUBJECTS];
 
@@ -790,8 +749,9 @@ export const getLecturers = async (): Promise<User[]> => {
   return querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
 };
 
-// Get lecturer by ID
-const getLecturerById = async (uid: string): Promise<User | null> => {
+// Get lecturer by ID - DEPRECATED: Use getUserById instead
+export const getLecturerById = async (uid: string): Promise<User | null> => {
+  console.warn('getLecturerById is deprecated. Use getUserById instead.');
   const docRef = doc(db, 'users', uid);
   const docSnap = await getDoc(docRef);
   if (!docSnap.exists()) return null;
@@ -802,14 +762,16 @@ const getLecturerById = async (uid: string): Promise<User | null> => {
   return { uid: docSnap.id, ...userData } as User;
 };
 
-// Update lecturer
-const updateLecturer = async (id: string, data: Partial<Lecturer>) => {
+// Update lecturer - DEPRECATED: Use updateUser instead
+export const updateLecturer = async (id: string, data: Partial<Lecturer>) => {
+  console.warn('updateLecturer is deprecated. Use updateUser instead.');
   const docRef = doc(db, 'lecturers', id);
   await updateDoc(docRef, data);
 };
 
-// Delete lecturer
-const deleteLecturer = async (id: string) => {
+// Delete lecturer - DEPRECATED: Use deleteUser instead
+export const deleteLecturer = async (id: string) => {
+  console.warn('deleteLecturer is deprecated. Use deleteUser instead.');
   const docRef = doc(db, 'lecturers', id);
   await deleteDoc(docRef);
 };

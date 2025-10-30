@@ -30,7 +30,8 @@ const EmailTestPanel: React.FC = () => {
           message: 'Email service test failed. Check console for details.'
         });
       }
-    } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error: unknown) {
       setTestResult('error');
       addNotification({
         type: 'error',
