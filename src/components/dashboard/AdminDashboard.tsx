@@ -41,9 +41,10 @@ const AdminDashboard: React.FC = () => {
         setStudents(studentsData);
         setSubjects(subjectData);
         setApplications(applicationsData.filter(app => app.status == 'pending'));
-      } catch (error: any) {
-        console.error('Error fetching dashboard data:', error);
-        setError(error.message || 'Failed to load dashboard data');
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        const message = err instanceof Error ? err.message : 'Failed to load dashboard data';
+        setError(message);
         addNotification({
           type: 'error',
           title: 'Dashboard Error',
@@ -55,7 +56,7 @@ const AdminDashboard: React.FC = () => {
     }
 
     load();
-  }, [currentUser, navigate])
+  }, [currentUser, navigate, addNotification])
 
   if(loading){
     return <SkeletonDashboard/>
@@ -138,36 +139,56 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pending Approvals */}
+        {/* Pending Approvals (click-through to Applications Management) */}
         <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center">
               <AlertTriangle className="h-5 w-5 mr-2 text-orange-600" />
-              Pending Approvals
+              Pending Applications
             </h2>
+            <button
+              onClick={() => navigate('/applications-management')}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              aria-label="View all pending applications"
+            >
+              View All
+            </button>
           </div>
           <div className="p-6">
-            <div className="space-y-4">
-              {applications.slice(0, 3).map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{students.filter(student => student.uid === item.studentId)[0]?.firstName}</p>
-                    <p className="text-sm text-gray-600">
-                      {item.courseCode} - {students.filter(student => student.uid === item.studentId)[0]?.firstName} {students.filter(student => student.uid === item.studentId)[0]?.lastName}
-                    </p>
-                    <p className="text-xs text-gray-500">{item.createdAt.toDate().toLocaleDateString()}</p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button className="px-3 py-1 bg-green-600 text-white text-xs rounded-full hover:bg-green-700 transition-colors">
-                      Approve
+            {applications.length === 0 && (
+              <p className="text-sm text-gray-500">No pending applications.</p>
+            )}
+            <ul className="space-y-3">
+              {applications.slice(0, 5).map(app => {
+                const student = students.find(s => s.uid === app.studentId);
+                return (
+                  <li key={app.id}>
+                    <button
+                      onClick={() => navigate('/applications-management', { state: { highlightId: app.id } })}
+                      className="w-full text-left p-4 bg-orange-50 hover:bg-orange-100 transition-colors rounded-lg border border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-400 group"
+                      aria-label={`Open application for ${student ? student.firstName + ' ' + student.lastName : 'Unknown'} in ${app.courseCode}`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">
+                            {student ? `${student.firstName} ${student.lastName}` : 'Unknown Student'}
+                          </p>
+                          <p className="text-sm text-gray-600 truncate">
+                            Course: <span className="font-medium">{app.courseCode}</span>
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Submitted: {app.createdAt.toDate().toLocaleDateString()} • Status: <span className="text-orange-700 font-medium">Pending</span>
+                          </p>
+                        </div>
+                        <span className="text-xs text-orange-700 bg-orange-100 px-2 py-1 rounded-full h-fit group-hover:bg-orange-200">
+                          Review
+                        </span>
+                      </div>
                     </button>
-                    <button className="px-3 py-1 bg-red-600 text-white text-xs rounded-full hover:bg-red-700 transition-colors">
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         </div>
       </div>

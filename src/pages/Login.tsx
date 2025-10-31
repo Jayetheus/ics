@@ -31,7 +31,8 @@ const Login: React.FC = () => {
     if (currentUser) navigate("/", { replace: true });
   }, [currentUser, navigate]);
 
-  const onSubmit = async (formData: any) => {
+  interface LoginFormData { email: string; password: string; }
+  const onSubmit = async (formData: LoginFormData) => {
     try {
       setLoading(true);
       await login(formData.email, formData.password);
@@ -42,11 +43,12 @@ const Login: React.FC = () => {
         message: 'Welcome back! You have been logged in successfully.',
       });
       // Do not navigate immediately — wait for auth state change to update currentUser
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to log in. Please check your credentials.';
       addNotification({
         type: 'error',
         title: 'Login Failed',
-        message: error.message || 'Failed to log in. Please check your credentials.',
+        message,
       });
     } finally {
       setLoading(false);
@@ -102,7 +104,15 @@ const Login: React.FC = () => {
             className="space-y-6" 
             onSubmit={(e) => {
               e.preventDefault();
-              handleSubmit(onSubmit);
+              const valid = handleSubmit(onSubmit);
+              if (!valid) {
+                // Show a general message if fields invalid
+                addNotification({
+                  type: 'error',
+                  title: 'Validation Error',
+                  message: 'All required fields must be provided with valid values.'
+                });
+              }
             }}
           >
             {/* Email Field */}

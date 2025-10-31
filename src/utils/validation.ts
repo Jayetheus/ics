@@ -221,8 +221,9 @@ export const validatePassword = (password: string): boolean => {
 };
 
 export const validatePhoneNumber = (phone: string): boolean => {
-  // Support various international / US formats and common separators
+  // Accept international numbers (+ followed by 10-15 digits) and common US formats
+  // +1234567890, 123-456-7890, (123) 456-7890, 1234567890
   const value = phone.replace(/\s/g, '');
-  const phonePattern = /^(\+?[0-9]{1,3}[-.\s]?)?(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})$/;
+  const phonePattern = /^(\+\d{10,15}|\d{10}|\d{3}[-.]\d{3}[-.]\d{4}|\(\d{3}\) ?\d{3}[-.]\d{4})$/;
   return phonePattern.test(value);
 };

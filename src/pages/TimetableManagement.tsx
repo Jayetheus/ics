@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Plus, 
   Edit, 
@@ -15,6 +15,7 @@ import {
   getSubjectsByCourse, 
   getLecturers, 
   getTimetableByCourse, 
+  getTimetable,
   createTimetableEntry, 
   updateTimetableEntry, 
   deleteTimetableEntry 
@@ -67,7 +68,7 @@ const TimetableManagement: React.FC = () => {
           getLecturers()
         ]);
         setCourses(coursesData);
-        setLecturers(lecturersData as any);
+  setLecturers(lecturersData as Lecturer[]);
       } catch (error) {
         console.error('Error fetching data:', error);
         addNotification({
@@ -82,32 +83,32 @@ const TimetableManagement: React.FC = () => {
     fetchData();
   }, [addNotification]);
 
+  const fetchTimetable = useCallback(async () => {
+    if (!selectedCourse) return;
+    try {
+      const timetableData = await getTimetableByCourse(selectedCourse, selectedSemester, selectedYear);
+      setTimetable(timetableData);
+    } catch (err) {
+      console.error('Error fetching timetable:', err);
+    }
+  }, [selectedCourse, selectedSemester, selectedYear]);
+
+  const fetchSubjects = useCallback(async () => {
+    if (!selectedCourse) return;
+    try {
+      const subjectsData = await getSubjectsByCourse(selectedCourse);
+      setSubjects(subjectsData);
+    } catch (err) {
+      console.error('Error fetching subjects:', err);
+    }
+  }, [selectedCourse]);
+
   useEffect(() => {
     if (selectedCourse) {
       fetchTimetable();
       fetchSubjects();
     }
-  }, [selectedCourse, selectedSemester, selectedYear]);
-
-  const fetchTimetable = async () => {
-    if (!selectedCourse) return;
-    try {
-      const timetableData = await getTimetableByCourse(selectedCourse, selectedSemester, selectedYear);
-      setTimetable(timetableData);
-    } catch (error) {
-      console.error('Error fetching timetable:', error);
-    }
-  };
-
-  const fetchSubjects = async () => {
-    if (!selectedCourse) return;
-    try {
-      const subjectsData = await getSubjectsByCourse(selectedCourse);
-      setSubjects(subjectsData);
-    } catch (error) {
-      console.error('Error fetching subjects:', error);
-    }
-  };
+  }, [selectedCourse, selectedSemester, selectedYear, fetchTimetable, fetchSubjects]);
 
   // Helper: convert HH:MM to minutes since midnight
   const timeToMinutes = (t: string) => {
@@ -178,8 +179,13 @@ const TimetableManagement: React.FC = () => {
       const course = courses.find(c => c.code === selectedCourse);
       const lecturer = lecturers.find(l => l.uid === newEntry.lecturerId);
       const subject = subjects.find(s => s.code === newEntry.subjectCode);
+      // basic time validation
+      if (newEntry.startTime && newEntry.endTime && newEntry.startTime >= newEntry.endTime) {
+        addNotification({ type: 'error', title: 'Validation Error', message: 'End time must be after start time' });
+        return;
+      }
 
-  const entryData: Omit<Timetable, 'id' | 'createdAt' | 'updatedAt'> = {
+      const entryData: Omit<Timetable, 'id' | 'createdAt' | 'updatedAt'> = {
         courseCode: selectedCourse,
         courseName: course?.name || '',
         subjectCode: newEntry.subjectCode || '',
@@ -199,6 +205,28 @@ const TimetableManagement: React.FC = () => {
       const clashes = findClashes(entryData);
       if (clashes.length > 0) {
         addNotification({ type: 'error', title: 'Clash Detected', message: clashes.join('; ') });
+        return;
+      }
+
+      // global conflict detection (across all courses) for lecturer & venue reuse in overlapping time
+      const allEntries = await getTimetable();
+      const globalConflicts: string[] = [];
+      allEntries.forEach(e => {
+        if (e.day !== entryData.day) return;
+        if (e.year !== entryData.year) return;
+        if (e.semester !== entryData.semester) return;
+        if (e.courseCode === entryData.courseCode) return; // already covered by local clashes
+        if (timesOverlap(entryData.startTime, entryData.endTime, e.startTime, e.endTime)) {
+          if (e.venue === entryData.venue) {
+            globalConflicts.push(`Venue ${entryData.venue} already in use by ${e.courseCode} ${e.subjectName} (${e.startTime}-${e.endTime})`);
+          }
+          if (entryData.lecturerId && e.lecturerId === entryData.lecturerId) {
+            globalConflicts.push(`Lecturer already teaching ${e.courseCode} ${e.subjectName} at ${e.startTime}-${e.endTime} (${e.venue})`);
+          }
+        }
+      });
+      if (globalConflicts.length) {
+        addNotification({ type: 'error', title: 'Cross-Course Conflict', message: globalConflicts.join('; ') });
         return;
       }
 
@@ -226,7 +254,7 @@ const TimetableManagement: React.FC = () => {
         title: 'Success',
         message: 'Timetable entry added successfully'
       });
-    } catch (error) {
+    } catch {
       addNotification({
         type: 'error',
         title: 'Error',
@@ -243,6 +271,11 @@ const TimetableManagement: React.FC = () => {
       const lecturer = lecturers.find(l => l.uid === editingEntry.lecturerId);
       const subject = subjects.find(s => s.code === editingEntry.subjectCode);
 
+      if (editingEntry.startTime >= editingEntry.endTime) {
+        addNotification({ type: 'error', title: 'Validation Error', message: 'End time must be after start time' });
+        return;
+      }
+
       const updatedData = {
         ...editingEntry,
         lecturerName: lecturer ? `${lecturer.firstName} ${lecturer.lastName}` : editingEntry.lecturerName,
@@ -256,7 +289,29 @@ const TimetableManagement: React.FC = () => {
         return;
       }
 
-      await updateTimetableEntry(editingEntry.id, updatedData as any);
+      // global conflict detection similar to add (exclude this entry id)
+      const allEntries = await getTimetable();
+      const globalConflicts: string[] = [];
+      allEntries.forEach(e => {
+        if (e.id === editingEntry.id) return;
+        if (e.day !== updatedData.day) return;
+        if (e.year !== updatedData.year) return;
+        if (e.semester !== updatedData.semester) return;
+        if (timesOverlap(updatedData.startTime!, updatedData.endTime!, e.startTime, e.endTime)) {
+          if (e.venue === updatedData.venue) {
+            globalConflicts.push(`Venue ${updatedData.venue} already in use by ${e.courseCode} ${e.subjectName} (${e.startTime}-${e.endTime})`);
+          }
+          if (updatedData.lecturerId && e.lecturerId === updatedData.lecturerId) {
+            globalConflicts.push(`Lecturer already teaching ${e.courseCode} ${e.subjectName} at ${e.startTime}-${e.endTime} (${e.venue})`);
+          }
+        }
+      });
+      if (globalConflicts.length) {
+        addNotification({ type: 'error', title: 'Cross-Course Conflict', message: globalConflicts.join('; ') });
+        return;
+      }
+
+  await updateTimetableEntry(editingEntry.id, updatedData as Timetable);
 
       await fetchTimetable();
       setEditingEntry(null);
@@ -266,7 +321,7 @@ const TimetableManagement: React.FC = () => {
         title: 'Success',
         message: 'Timetable entry updated successfully'
       });
-    } catch (error) {
+    } catch {
       addNotification({
         type: 'error',
         title: 'Error',
@@ -287,7 +342,7 @@ const TimetableManagement: React.FC = () => {
         title: 'Success',
         message: 'Timetable entry deleted successfully'
       });
-    } catch (error) {
+    } catch {
       addNotification({
         type: 'error',
         title: 'Error',

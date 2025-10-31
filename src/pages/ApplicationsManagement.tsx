@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { getAllApplications, updateApplicationStatus, getCourses, getStudents, getAssets } from '../services/database';
 import { emailService } from '../services/emailService';
 import { Application, Course, User,Asset } from '../types';
 import { CheckCircle, X, Search, Filter, User as UserIcon, Calendar, FileText, AlertTriangle } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
+import { useLocation } from 'react-router-dom';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const ApplicationsManagement: React.FC = () => {
@@ -18,6 +19,9 @@ const ApplicationsManagement: React.FC = () => {
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [notes, setNotes] = useState('');
   const { addNotification } = useNotification();
+  const location = useLocation();
+  const highlightId = (location.state as { highlightId?: string } | null | undefined)?.highlightId;
+  const highlightedRowRef = useRef<HTMLTableRowElement | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -58,9 +62,22 @@ const ApplicationsManagement: React.FC = () => {
     return matchS && matchQ;
   });
 
-  const handleViewDocument = (document: any) => {
-  setSelectedDocument(document);
-};
+  useEffect(() => {
+    if (highlightId && highlightedRowRef.current) {
+      highlightedRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Brief pulse animation removal after animation ends
+      const timer = setTimeout(() => {
+        if (highlightedRowRef.current) {
+          highlightedRowRef.current.classList.remove('ring-2', 'ring-orange-400');
+        }
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightId, applications]);
+
+  const handleViewDocument = (document: Asset) => {
+    setSelectedDocument(document);
+  };
 
   const handleAction = async (id: string, newStatus: Application['status'], reviewNotes?: string) => {
     try {
@@ -129,7 +146,8 @@ const ApplicationsManagement: React.FC = () => {
 
       setSelectedApp(null);
       setNotes('');
-    } catch (error) {
+    } catch (err) {
+      console.error('Application status update failed', err);
       addNotification({
         type: 'error',
         title: 'Update Failed',
@@ -247,7 +265,7 @@ const ApplicationsManagement: React.FC = () => {
             <Filter className="h-5 w-5 text-gray-400" />
             <select
               value={status}
-              onChange={(e) => setStatus(e.target.value as any)}
+              onChange={(e) => setStatus(e.target.value as Application['status'] | 'all')}
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Status</option>
@@ -286,7 +304,11 @@ const ApplicationsManagement: React.FC = () => {
               {filtered.map(a => {
                 const student = students.find(std => std.uid === a.studentId);
                 return (
-                  <tr key={a.id} className="hover:bg-gray-50">
+                  <tr
+                    key={a.id}
+                    ref={highlightId === a.id ? highlightedRowRef : null}
+                    className={`hover:bg-gray-50 transition-colors ${highlightId === a.id ? 'ring-2 ring-orange-400 animate-pulse' : ''}`}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="p-2 bg-blue-100 rounded-full">
@@ -309,9 +331,7 @@ const ApplicationsManagement: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm text-gray-900">
                         <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                        {a.createdAt && typeof a.createdAt.toDate === 'function'
-                          ? a.createdAt.toDate().toLocaleDateString()
-                          : new Date(a.createdAt as any).toLocaleDateString()}
+                        {a.createdAt.toDate().toLocaleDateString()}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -397,15 +417,22 @@ const ApplicationsManagement: React.FC = () => {
                       <p className="text-gray-900">{selectedApp.courseCode} - {courseName(selectedApp.courseCode)}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Qualify: </label>
-                      <p className="text-gray-900">{students.find(std => selectedApp.studentId == std.uid)?.results?.reduce((prev, curr) => prev + curr) === courses.find(course => selectedApp.courseCode === course.code)?.apsRequired}</p>
-                    </div>
-                    <div>
                       <label className="block text-sm font-medium text-gray-700">Application Date</label>
+                      <p className="text-gray-900">{selectedApp.createdAt.toDate().toLocaleDateString()}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700">Qualification Check</label>
                       <p className="text-gray-900">
-                        {selectedApp.createdAt && typeof selectedApp.createdAt.toDate === 'function'
-                          ? selectedApp.createdAt.toDate().toLocaleDateString()
-                          : new Date(selectedApp.createdAt as any).toLocaleDateString()}
+                        {(() => {
+                          const student = students.find(std => selectedApp.studentId === std.uid);
+                          const course = courses.find(c => c.code === selectedApp.courseCode);
+                          if (!student || !course) return 'Unavailable';
+                          const aps = parseInt(course.apsRequired, 10);
+                          const marks = Array.isArray(student.results) ? student.results.map(r => r.mark ?? 0) : [];
+                          if (!marks.length || Number.isNaN(aps)) return 'N/A';
+                          const avg = Math.round(marks.reduce((s, m) => s + m, 0) / marks.length);
+                          return avg >= aps ? `Yes (Avg ${avg} ≥ APS ${aps})` : `No (Avg ${avg} < APS ${aps})`;
+                        })()}
                       </p>
                     </div>
                   </div>

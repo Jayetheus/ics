@@ -20,13 +20,14 @@ import {
   checkStudentAttendance,
   getAttendanceRecordsByStudent
 } from '../services/database';
-import { parseQRCode, isQRCodeExpired } from '../utils/qrCodeUtils';
+import { parseQRCode, isQRCodeExpired, QRCodeData } from '../utils/qrCodeUtils';
 import { AttendanceRecord } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
+interface DetectedCode { rawValue: string }
 type CameraScannerProps = {
-  onScan: (detectedCodes: any[]) => void;
-  onError: (err: any) => void;
+  onScan: (detectedCodes: DetectedCode[]) => void;
+  onError: (err: Error) => void;
   constraints?: MediaStreamConstraints;
   setCameraLoading?: (v: boolean) => void;
   initialStream?: MediaStream | null;
@@ -42,10 +43,10 @@ const CameraScanner: React.FC<CameraScannerProps> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const detectorRef = useRef<any>(null);
+  const detectorRef = useRef<BarcodeDetector | null>(null);
   const scanCooldownRef = useRef(false);
 
-  const startDetectionLoop = async (detector: any) => {
+  const startDetectionLoop = async (detector: BarcodeDetector) => {
     const detectLoop = async () => {
       try {
         if (!videoRef.current || !detector || scanCooldownRef.current) {
@@ -58,12 +59,12 @@ const CameraScanner: React.FC<CameraScannerProps> = ({
           return;
         }
 
-        const barcodes = await detector.detect(videoRef.current);
+  const barcodes = await detector.detect(videoRef.current);
         
         if (barcodes && barcodes.length > 0) {
           scanCooldownRef.current = true;
-          const results = barcodes.map((b: any) => ({ 
-            rawValue: b.rawValue || b.raw_value || b.rawData 
+          const results: DetectedCode[] = barcodes.map((b: any) => ({
+            rawValue: b.rawValue || b.raw_value || b.rawData
           }));
           onScan(results);
           
@@ -219,7 +220,7 @@ const StudentAttendance: React.FC = () => {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
-  const [scannedData, setScannedData] = useState<any>(null);
+  const [scannedData, setScannedData] = useState<QRCodeData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraLoading, setCameraLoading] = useState(false);
@@ -481,20 +482,43 @@ const StudentAttendance: React.FC = () => {
     fetchAttendanceRecords();
   }, [currentUser]);
 
-  const handleScan = async (detectedCodes: any[]) => {
+  interface DetectedCodeScan { rawValue: string }
+  const handleScan = async (detectedCodes: DetectedCodeScan[]) => {
     if (detectedCodes.length === 0 || isProcessing) return;
 
     const result = detectedCodes[0].rawValue;
     setIsProcessing(true);
     
     try {
-      const qrData = parseQRCode(result);
+      const qrData = parseQRCode(result) as QRCodeData | null;
       
       if (!qrData) {
         addNotification({
           type: 'error',
           title: 'Invalid QR Code',
           message: 'The scanned QR code is not valid'
+        });
+        return;
+      }
+
+      if (qrData.type !== 'attendance') {
+        addNotification({
+          type: 'error',
+          title: 'Invalid QR Type',
+          message: 'This QR code is not an attendance code'
+        });
+        return;
+      }
+
+      // Basic shape validation
+      const requiredFields: (keyof QRCodeData)[] = ['sessionId','lecturerId','subjectCode','courseCode','venue','date','startTime','endTime','timestamp'];
+  const qrRecord = qrData as unknown as Record<string, unknown>;
+  const missing = requiredFields.filter(f => qrRecord[f] === undefined || qrRecord[f] === '');
+      if (missing.length) {
+        addNotification({
+          type: 'error',
+          title: 'Corrupt QR Code',
+          message: 'Missing fields: ' + missing.join(', ')
         });
         return;
       }
@@ -508,7 +532,7 @@ const StudentAttendance: React.FC = () => {
         return;
       }
 
-      const alreadyMarked = await checkStudentAttendance(qrData.sessionId, currentUser?.uid || "");
+  const alreadyMarked = await checkStudentAttendance(qrData.sessionId, currentUser?.uid || "");
       if (alreadyMarked) {
         addNotification({
           type: 'warning',
@@ -536,7 +560,7 @@ const StudentAttendance: React.FC = () => {
     }
   };
 
-  const handleScannerError = (error: any) => {
+  const handleScannerError = (error: Error) => {
     console.error('QR Scanner Error:', error);
     handleCameraError(error);
   };

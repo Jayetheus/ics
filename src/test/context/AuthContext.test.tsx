@@ -1,6 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../../context/AuthContext';
 import { ReactNode } from 'react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock the database functions
 vi.mock('../../services/database', () => ({
@@ -10,14 +11,21 @@ vi.mock('../../services/database', () => ({
 }));
 
 // Mock Firebase
-vi.mock('../../services/firebase', () => ({
-  auth: {
-    onAuthStateChanged: vi.fn(),
-    signInWithEmailAndPassword: vi.fn(),
-    createUserWithEmailAndPassword: vi.fn(),
-    signOut: vi.fn(),
-  },
-  db: {},
+vi.mock('../../services/firebase', () => {
+  return {
+    auth: {
+      onAuthStateChanged: (cb: (user: any) => void) => { cb(null); return () => {}; },
+    },
+    db: {},
+  };
+});
+
+// Mock firebase/auth named functions used (signInWithEmailAndPassword etc.)
+vi.mock('firebase/auth', () => ({
+  signInWithEmailAndPassword: vi.fn(() => Promise.resolve({ user: { uid: 'test-uid' } })),
+  createUserWithEmailAndPassword: vi.fn(() => Promise.resolve({ user: { uid: 'new-uid' } })),
+  signOut: vi.fn(() => Promise.resolve()),
+  onAuthStateChanged: vi.fn((_auth: unknown, cb: (user: unknown) => void) => { cb(null); return () => {}; })
 }));
 
 const wrapper = ({ children }: { children: ReactNode }) => (
@@ -40,11 +48,7 @@ describe('AuthContext', () => {
   });
 
   it('should handle login', async () => {
-    const mockUser = {
-      uid: 'test-uid',
-      email: 'test@example.com',
-      displayName: 'Test User',
-    };
+    // Removed unused mockUser; login flow just needs function to resolve
 
     const { result } = renderHook(() => {
       const { login } = useAuth();

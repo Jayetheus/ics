@@ -3,12 +3,9 @@ import {
   QrCode, 
   Clock, 
   MapPin, 
-  Users, 
-  Play, 
   Download,
   Calendar,
   BookOpen,
-  CheckCircle,
   AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -19,9 +16,9 @@ import {
   createAttendanceSession, 
   getAttendanceSessionsByLecturer,
   updateAttendanceSession,
-  getAttendanceRecordsBySession,
-  getUserById
+  checkAttendanceSessionConflict
 } from '../services/database';
+import { Timestamp } from 'firebase/firestore';
 import { generateQRCode, generateQRCodeData } from '../utils/qrCodeUtils';
 import { AttendanceSession, Subject, Course } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -74,20 +71,19 @@ const LecturerAttendance: React.FC = () => {
     fetchData();
   }, [currentUser, addNotification]);
 
-  useEffect(() => {
-    if (newSession.courseCode) {
-      fetchSubjects();
-    }
-  }, [newSession.courseCode]);
-
-  const fetchSubjects = async () => {
+  const fetchSubjects = React.useCallback(async () => {
+    if (!newSession.courseCode) return;
     try {
       const subjectsData = await getSubjectsByCourse(newSession.courseCode);
       setSubjects(subjectsData);
-    } catch (error) {
-      console.error('Error fetching subjects:', error);
+    } catch (err) {
+      console.error('Error fetching subjects:', err);
     }
-  };
+  }, [newSession.courseCode]);
+
+  useEffect(() => {
+    fetchSubjects();
+  }, [fetchSubjects]);
 
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,7 +102,41 @@ const LecturerAttendance: React.FC = () => {
         return;
       }
 
-      // Generate QR code data
+      // Basic validations
+      const startMinutes = parseInt(newSession.startTime.slice(0,2)) * 60 + parseInt(newSession.startTime.slice(3));
+      const endMinutes = parseInt(newSession.endTime.slice(0,2)) * 60 + parseInt(newSession.endTime.slice(3));
+      if (endMinutes <= startMinutes) {
+        addNotification({ type: 'error', title: 'Validation Error', message: 'End time must be after start time' });
+        return;
+      }
+      if (endMinutes - startMinutes > 4 * 60) { // limit 4 hours
+        addNotification({ type: 'error', title: 'Validation Error', message: 'Session duration cannot exceed 4 hours' });
+        return;
+      }
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (newSession.date < todayStr) {
+        addNotification({ type: 'error', title: 'Validation Error', message: 'Cannot create session in the past' });
+        return;
+      }
+
+      // Conflict detection
+      const conflicts = await checkAttendanceSessionConflict({
+        lecturerId: currentUser.uid,
+        date: newSession.date,
+        startTime: newSession.startTime,
+        endTime: newSession.endTime,
+        venue: newSession.venue
+      });
+      if (conflicts.length > 0) {
+        addNotification({
+          type: 'error',
+          title: 'Conflict Detected',
+          message: 'Overlapping active session exists for this time or venue.'
+        });
+        return;
+      }
+
+      // Generate QR code data (sessionId blank until created)
       const qrData = generateQRCodeData(
         '', // Will be set after session creation
         currentUser.uid,
@@ -134,7 +164,7 @@ const LecturerAttendance: React.FC = () => {
       });
 
       // Generate QR code with session ID
-      const updatedQrData = { ...qrData, sessionId };
+  const updatedQrData = { ...qrData, sessionId };
       const qrCodeURL = await generateQRCode(updatedQrData);
 
       // Update session with QR code
@@ -156,8 +186,8 @@ const LecturerAttendance: React.FC = () => {
         endTime: newSession.endTime,
         qrCode: JSON.stringify(updatedQrData),
         isActive: true,
-        createdAt: { seconds: Date.now() / 1000, nanoseconds: 0 } as any,
-        expiresAt: { seconds: (Date.now() + 2 * 60 * 60 * 1000) / 1000, nanoseconds: 0 } as any
+        createdAt: Timestamp.fromDate(new Date()),
+        expiresAt: Timestamp.fromDate(new Date(Date.now() + 2 * 60 * 60 * 1000))
       };
 
       setSessions([newSessionData, ...sessions]);
@@ -180,7 +210,7 @@ const LecturerAttendance: React.FC = () => {
         startTime: '08:00',
         endTime: '09:00'
       });
-    } catch (error) {
+    } catch {
       addNotification({
         type: 'error',
         title: 'Creation Failed',
@@ -204,7 +234,7 @@ const LecturerAttendance: React.FC = () => {
         title: 'Session Stopped',
         message: 'Attendance session has been stopped'
       });
-    } catch (error) {
+    } catch {
       addNotification({
         type: 'error',
         title: 'Stop Failed',
@@ -215,12 +245,14 @@ const LecturerAttendance: React.FC = () => {
 
   const handleShowQRCode = async (session: AttendanceSession) => {
     try {
-      const qrData = JSON.parse(session.qrCode);
+      const qrDataRaw = JSON.parse(session.qrCode);
+      // Backfill type if missing (legacy data)
+      const qrData = qrDataRaw.type ? qrDataRaw : { ...qrDataRaw, type: 'attendance' };
       const qrCodeURL = await generateQRCode(qrData);
       setQrCodeDataURL(qrCodeURL);
       setCurrentSession(session);
       setShowQRCode(true);
-    } catch (error) {
+    } catch {
       addNotification({
         type: 'error',
         title: 'QR Code Error',

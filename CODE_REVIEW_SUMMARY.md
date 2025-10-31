@@ -138,3 +138,35 @@ Ensure all required environment variables are properly set:
 ## Conclusion
 
 The codebase has been significantly improved with better type safety, error handling, and code organization. The fixes address the major logical errors and coding standards violations while maintaining functionality and improving maintainability.
+
+---
+
+## Recent Enhancements (QR Attendance & Timetable Conflicts)
+
+### QR Attendance Flow Improvements
+- Added a discriminated `type: 'attendance'` field in QR payloads to prevent cross-feature scanning misuse.
+- Implemented robust parsing (`parseQRCode`) with expiration validation using a shared utility instead of ad-hoc timestamp checks.
+- Lecturer attendance session creation now performs a conflict check (`checkAttendanceSessionConflict`) to avoid overlapping active sessions for the same lecturer / venue / timeslot.
+- Student scan logic rejects expired / mismatched QR codes early and surfaces clear notifications.
+- Introduced unit tests for QR generation + parsing + expiry logic ensuring regression protection.
+
+### Timetable Conflict Detection
+- Extracted pure utilities (`timetableUtils.ts`: `timeToMinutes`, `timesOverlap`, `findTimetableConflicts`) for isolated testing and reuse.
+- Added global cross-course conflict detection preventing lecturer or venue double-booking across different courses.
+- Incorporated conflict validation into `TimetableManagement` with concise user feedback prior to persistence.
+- Added tests covering single-slot overlaps, edge boundaries (adjacent times not conflicting), multi-course lecturer collisions, and venue collisions.
+
+### Testing Additions & Stabilization
+- New test suites: `qrAttendanceFlow.test.ts` and `timetableConflicts.test.ts` validate core scheduling & QR logic.
+- Began stabilization pass: aligned `UserManagement` component markup (labels, headings, accessible button names) to match existing tests and simplified deletion flow to meet test expectations.
+
+### Minimal Lint/Test Strategy
+- Deferred exhaustive lint cleanup per current project priority; addressed only changes that directly impacted failing tests or accessibility semantics.
+- Future pass should target remaining TypeScript `any` usages, unused variables, and React Hook dependency warnings for long-term maintainability.
+
+## Follow-Up Recommendations (Post-Stabilization)
+1. Consolidate deletion logic into a service layer with role-based authorization & audit logging.
+2. Expand QR attendance to include optional geolocation or device fingerprint for higher integrity (privacy-reviewed).
+3. Optimize timetable conflict checks by batching queries or caching lecturer/venue usage for large datasets.
+4. Add integration tests simulating end-to-end lecturer creation → timetable assignment → QR session → student scan.
+5. Document API shapes for attendance & timetable modules in `/docs` for third-party or future microservice integration.

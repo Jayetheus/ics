@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
@@ -28,17 +28,19 @@ vi.mock('../../context/NotificationContext', () => ({
 }));
 
 // Mock the database functions
-vi.mock('../../services/database', () => ({
-  getUsers: vi.fn(),
-  getColleges: vi.fn(),
-  createUser: vi.fn(),
-  updateUser: vi.fn(),
-  deleteUser: vi.fn(),
-  createLecturer: vi.fn(),
-  getAssetsByUploader: vi.fn(),
-  createAsset: vi.fn(),
-  deleteAsset: vi.fn(),
-}));
+vi.mock('../../services/database', () => {
+  return {
+    getUsers: vi.fn().mockResolvedValue([]),
+    getColleges: vi.fn().mockResolvedValue([]),
+    createUser: vi.fn(),
+    updateUser: vi.fn(),
+    deleteUser: vi.fn().mockResolvedValue({}),
+    createLecturer: vi.fn(),
+    getAssetsByUploader: vi.fn().mockResolvedValue([]),
+    createAsset: vi.fn(),
+    deleteAsset: vi.fn(),
+  };
+});
 
 // Mock the email service
 vi.mock('../../services/emailService', () => ({
@@ -97,15 +99,16 @@ describe('UserManagement Page', () => {
 
   it('should display users in table', async () => {
   const db = await import('../../services/database');
-  db.getUsers.mockResolvedValue(mockUsers);
-  db.getColleges.mockResolvedValue(mockColleges);
+  (db.getUsers as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue(mockUsers);
+  (db.getColleges as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue(mockColleges);
   renderWithRouter(<UserManagement />);
     
     await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
-      expect(screen.getByText('jane@example.com')).toBeInTheDocument();
-      expect(screen.getByText('student')).toBeInTheDocument();
-      expect(screen.getByText('lecturer')).toBeInTheDocument();
+      // Table cells: use getAllByText to avoid option/tag duplicates
+      expect(screen.getAllByText('John Doe').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('jane@example.com').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('student').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('lecturer').length).toBeGreaterThan(0);
     });
   });
 
@@ -119,10 +122,10 @@ describe('UserManagement Page', () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByText('Add User')).toBeInTheDocument();
+      // Heading uses same text as button; ensure form is present by checking form fields
       expect(screen.getByLabelText(/first name/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/last name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument();
     });
   });
 
@@ -136,7 +139,7 @@ describe('UserManagement Page', () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getAllByText('John Doe').length).toBeGreaterThan(0);
       expect(screen.queryByText('Jane Smith')).not.toBeInTheDocument();
     });
   });
@@ -151,7 +154,7 @@ describe('UserManagement Page', () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getAllByText('John Doe').length).toBeGreaterThan(0);
       expect(screen.queryByText('Jane Smith')).not.toBeInTheDocument();
     });
   });
@@ -167,8 +170,8 @@ describe('UserManagement Page', () => {
     
     await waitFor(() => {
       expect(screen.getByText('User Details')).toBeInTheDocument();
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
-      expect(screen.getByText('john@example.com')).toBeInTheDocument();
+      expect(screen.getAllByText(/John\s+Doe/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText('john@example.com').length).toBeGreaterThan(0);
     });
   });
 
@@ -191,8 +194,8 @@ describe('UserManagement Page', () => {
   it('should delete user when delete button is clicked', async () => {
     const user = userEvent.setup();
     window.confirm = vi.fn(() => true);
-    const db = await import('../../services/database');
-    db.deleteUser.mockResolvedValue({});
+  const db = await import('../../services/database');
+  (db.deleteUser as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue({});
 
     renderWithRouter(<UserManagement />);
     
@@ -243,7 +246,7 @@ describe('UserManagement Page', () => {
     ];
     
   const db = await import('../../services/database');
-  db.getAssetsByUploader.mockResolvedValue(mockDocuments);
+  (db.getAssetsByUploader as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue(mockDocuments);
     
     const user = userEvent.setup();
     renderWithRouter(<UserManagement />);

@@ -1,6 +1,7 @@
 import QRCode from 'qrcode';
 
 export interface QRCodeData {
+  type: 'attendance';
   sessionId: string;
   lecturerId: string;
   subjectCode: string;
@@ -9,7 +10,7 @@ export interface QRCodeData {
   date: string;
   startTime: string;
   endTime: string;
-  timestamp: number;
+  timestamp: number; // creation timestamp (used for expiry window client-side)
 }
 
 
@@ -31,7 +32,9 @@ export const generateQRCode = async (data: QRCodeData): Promise<string> => {
   }
 };
 
-export const parseQRCode = (qrData: string): any | null => {
+type LegacyAttendanceQR = { sessionId: string; timestamp: number; type?: string };
+
+export const parseQRCode = (qrData: string): QRCodeData | LegacyAttendanceQR | null => {
   try {
     const parsed = JSON.parse(qrData);
     
@@ -67,16 +70,15 @@ export const generateQRCodeData = (
   date: string,
   startTime: string,
   endTime: string
-): QRCodeData => {
-  return {
-    sessionId,
-    lecturerId,
-    subjectCode,
-    courseCode,
-    venue,
-    date,
-    startTime,
-    endTime,
-    timestamp: Date.now()
-  };
-};
+): QRCodeData => ({
+  type: 'attendance',
+  sessionId,
+  lecturerId,
+  subjectCode,
+  courseCode,
+  venue,
+  date,
+  startTime,
+  endTime,
+  timestamp: Date.now()
+});

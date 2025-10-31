@@ -238,6 +238,42 @@ export const createAttendanceSession = async (sessionData: Omit<AttendanceSessio
   return docRef.id;
 };
 
+// Basic overlap check utility (time strings in HH:MM 24h format)
+const timesOverlap = (startA: string, endA: string, startB: string, endB: string) => {
+  const toMinutes = (t: string) => {
+    const [h, m] = t.split(':').map(Number); return h * 60 + m;
+  };
+  const a1 = toMinutes(startA); const a2 = toMinutes(endA);
+  const b1 = toMinutes(startB); const b2 = toMinutes(endB);
+  return a1 < b2 && b1 < a2; // overlapping intervals
+};
+
+/**
+ * checkAttendanceSessionConflict
+ * Detect if a lecturer already has an active (or same-day) session overlapping the given time
+ * OR if another session for the same course/venue overlaps. This helps prevent duplicate sessions.
+ */
+export const checkAttendanceSessionConflict = async (params: {
+  lecturerId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  venue: string;
+}) => {
+  const { lecturerId, date, startTime, endTime, venue } = params;
+  const qSessions = query(collection(db, 'attendanceSessions'), where('date', '==', date));
+  const snap = await getDocs(qSessions);
+  const sessions = snap.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceSession));
+  const conflicts = sessions.filter(s => {
+    if (s.id === undefined) return false;
+    const sameLecturer = s.lecturerId === lecturerId;
+    const sameVenue = s.venue?.toLowerCase() === venue.toLowerCase();
+    const overlap = timesOverlap(startTime, endTime, s.startTime, s.endTime);
+    return overlap && (sameLecturer || sameVenue) && s.isActive !== false;
+  });
+  return conflicts;
+};
+
 export const getAttendanceSessionsByLecturer = async (lecturerId: string) => {
   const q = query(collection(db, 'attendanceSessions'), where('lecturerId', '==', lecturerId));
   const querySnapshot = await getDocs(q);
